@@ -1,0 +1,110 @@
+# 실제 로봇 관절명/Home/Place/작업공간으로 수정하세요. 제공 값은 예제입니다.
+# depth_registered: RGB 좌표계로 Depth 정렬을 확인한 뒤 true로 설정.
+# depth_window=2는 5x5 픽셀, depth_consistency는 m 단위입니다.
+# vertical_half_width는 출발 XY 검사에만 사용하며 OMPL 통로 제약이 아닙니다.
+# max_orientation_drift=-1은 자세 자유; 0 이상이면 초기 자세 대비 FK 오차(rad) 제한.
+# 관절 한계는 move_group에서 읽습니다. 읽을 수 없으면 모션을 거부합니다.
+# table_*: 작업대 윗면/중심/크기(m, base frame). place Z는 작업대보다 높아야 함.
+# cartesian_scaling: 하강/상승 속도 비율(scaling 이하). ik_attempts: 자유 이동 IK 후보 수.
+# Humble IK 서비스 호환성을 위해 ik_timeout은 정수 초이며 service_timeout보다 작아야 합니다.
+click_to_3d:
+  ros__parameters:
+    rgb_topic: /astra/color/image_raw
+    depth_topic: /astra/depth/image_raw
+    info_topic: /astra/color/camera_info
+    base_frame: base_link
+    depth_registered: false
+    depth_scale_16u: 0.001
+    depth_min: 0.1
+    depth_max: 3.0
+    depth_window: 2
+    depth_consistency: 0.01
+    max_age: 0.5
+    image_is_raw: true
+vacuum_controller:
+  ros__parameters:
+    backend: serial
+    serial_device: /dev/ttyUSB0
+    baudrate: 115200
+    serial_boot_wait: 2.0
+    pump_pin: 17
+    vent_pin: 27
+    active_high: true
+    formation_time: 0.5
+    release_time: 0.2
+    status_period: 0.2
+vacuum_pick_and_place:
+  ros__parameters:
+    group: arm
+    base_frame: base_link
+    tcp_link: tip_link
+    move_action: /move_action
+    execute_action: /execute_trajectory
+    pipeline_id: ompl
+    joint_names:
+    - base
+    - shoulder
+    - elbow
+    - wrist_flex
+    home_joints:
+    - 0.0
+    - -0.5
+    - 1.0
+    - -0.5
+    place_xyz:
+    - 0.25
+    - -0.2
+    - 0.1
+    workspace_min:
+    - 0.05
+    - -0.4
+    - 0.02
+    workspace_max:
+    - 0.6
+    - 0.4
+    - 0.6
+    approach_height: 0.08
+    lift_height: 0.1
+    pick_z_offset: 0.0
+    position_tolerance: 0.001
+    vertical_half_width: 0.003
+    cartesian_step: 0.002
+    min_cartesian_fraction: 0.999
+    max_joint_step: 0.1
+    scaling: 0.3
+    planning_time: 8.0
+    action_timeout: 60.0
+    target_max_age: 1.0
+    ik_service: /compute_ik
+    fk_service: /compute_fk
+    validity_service: /check_state_validity
+    move_group_node: /move_group
+    joint_states_topic: /joint_states
+    joint_validation_step: 0.01
+    joint_state_timeout: 0.5
+    start_state_tolerance: 0.01
+    cartesian_scaling: 0.1
+    min_cartesian_duration: 0.5
+    ik_attempts: 5
+    ik_goal_joint_tolerance: 0.001
+    planning_scene_service: /apply_planning_scene
+    table_top_z: 0.0
+    table_center_xy:
+    - 0.3
+    - 0.0
+    table_size_xy:
+    - 0.8
+    - 1.0
+    table_thickness: 0.02
+    object_size_xy:
+    - 0.05
+    - 0.05
+    attach_clearance: 0.005
+    cup_link: ''
+    path_position_tolerance: 0.0015
+    max_orientation_drift: -1.0
+    ik_timeout: 1.0
+    service_timeout: 2.0
+    cartesian_planning_timeout: 60.0
+    vacuum_state_timeout: 2.0
+    cancel_timeout: 2.0

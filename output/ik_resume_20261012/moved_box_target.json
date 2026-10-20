@@ -1,0 +1,55 @@
+{
+  "target_table_xyz_candidate_m": [
+    0.24826312166204037,
+    0.09047070182424356,
+    0.03646997258333884
+  ],
+  "radius_camera_candidate_m": 0.26423384617787377,
+  "top_polygon_px": [
+    [
+      101,
+      192
+    ],
+    [
+      145,
+      192
+    ],
+    [
+      151,
+      215
+    ],
+    [
+      98,
+      215
+    ]
+  ],
+  "pixel": [
+    123.75,
+    203.5
+  ],
+  "old_camera_target": [
+    0.2057178772866899,
+    0.01898768242414598,
+    -0.007000000000000006
+  ],
+  "new_camera_target": [
+    0.2539011437703836,
+    0.09294732460683781,
+    -0.007000000000000006
+  ],
+  "empirical_anchor": [
+    0.2057178772866899,
+    0.01898768242414598,
+    0.03646997258333884
+  ],
+  "camera_crossvalidation_mm": 11.438,
+  "physical_target_measured": false,
+  "production_applied": false,
+  "scene_sha256": "781aa73bd873b766a80f801f8ff8a4dd775f4e650eb4c601e3e30746e865f067",
+  "old_camera_target_before_recalib_20261020": [
+    0.2113558993950331,
+    0.02146430520674024,
+    -0.007000000000000006
+  ],
+  "recalib_20261020_note": "카메라 재보정(카메라 보정/) 후 앵커 XY 오프셋을 0으로: old_camera_target XY를 empirical_anchor와 같게 함. contact_z(empirical_anchor z)는 그대로. 원래 값은 old_camera_target_before_recalib_20261020."
+}

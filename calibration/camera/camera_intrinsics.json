@@ -1,0 +1,29 @@
+{
+  "fx": 597.8012692358341,
+  "fy": 659.1486652427408,
+  "cx": 325.98544285719885,
+  "cy": 242.88435652180573,
+  "distortion": [
+    0.25138274669452126,
+    -0.7219120565944923,
+    -0.05587307479203079,
+    0.0020875971400429725,
+    0.7786024477249887
+  ],
+  "reprojection_rms_px": 0.6248237880784228,
+  "num_captures": 50,
+  "image_width": 640,
+  "image_height": 480,
+  "distortion_model": "plumb_bob",
+  "checkerboard_inner_corners": [
+    8,
+    6
+  ],
+  "square_size_m": 0.03,
+  "calibrated_at": "2026-10-01T16:04:57.534042",
+  "device": "Orbbec Astra (OpenNI2)",
+  "mirroring_enabled": false,
+  "source_session": "recalibration/20261001_155633",
+  "physical_accuracy_verified": false,
+  "validation_status": "metric_RGB_depth_disagreement_requires_recheck"
+}

@@ -1,0 +1,120 @@
+"""분류된 물체 → 로봇 집기 목표(x, y, 접촉 z). 하드웨어 접근 없음. 후보 계산이며 모션 허가가 아니다.
+
+- x, y: 깊이로 찾은 윗면 중심 픽셀을, 집기에 성공한 근거가 있는 평면 투영 방식(BoxLocator)에 넣는다.
+  윗면이 낮은 물체는 그만큼 낮은 평면에 투영한다.
+- 접촉 z: 사용자가 자로 잰 물체 높이(config/object_catalog.json) + 컵 접촉 보정.
+  깊이로 잰 높이는 ±3mm 오차가 있어 쓰지 않는다.
+- 깊이 윗면 중심과 기존 코드의 윗면 중심 픽셀은 빨간 정육면체에서 일정하게 (+17, +5.5)px
+  어긋나서(4개 프레임), 그만큼 빼서 쓴다. 다른 물체에도 같다고 가정한 값이다.
+"""
+import json
+import math
+from pathlib import Path
+
+import numpy as np
+
+from perception.box_target import BoxLocator, TABLE_PLANE_Z
+from perception.object_classify import classify_objects
+from robot.robot_model import load_planar_model, reachable
+from tray.tray_sorting import slot_for
+
+DEPTH_MINUS_TOP_CENTER_PX = (17., 5.5)
+REFERENCE_TOP_MM = 40.        # TABLE_PLANE_Z가 맞춰진 빨간 정육면체 윗면 높이
+ENVELOPE_M = (.16, .30)
+PICK_TILTS_DEG = (0., 5., 10., 15., 20.)
+PICK_REACH_MARGIN_M = .008
+LABELS = ('red_cube', 'white_box', 'tape_measure')
+MIN_CONTACT_Z_M = .010        # 사용자 지시(2026-10-15)로 30mm 하한을 없앴다. 컵이 책상에 닿는 것만 막는 최소선(pick_auto --min-contact-z-mm)
+
+
+def footprint_radius_mm(entry, default=40.):
+    """물체 윗면 가로×세로(footprint_mm)의 대각선 절반 = 방향을 몰라도 안전한 수평 반경. 크기를 모르면 가정값."""
+    size = entry.get('footprint_mm') if isinstance(entry, dict) else None
+    if not size:
+        return float(default)
+    return math.hypot(*size) / 2.
+
+
+def load_catalog(path):
+    data = json.loads(Path(path).read_text())
+    offset = data.get('cup_contact_offset_mm')
+    if isinstance(offset, bool) or not isinstance(offset, (int, float)) or not math.isfinite(offset):
+        raise ValueError('cup_contact_offset_mm must be a finite number')
+    objects = data.get('objects') or {}
+    for label in LABELS:
+        entry = objects.get(label)
+        height = entry.get('height_mm') if isinstance(entry, dict) else None
+        if isinstance(height, bool) or not isinstance(height, (int, float)) or not math.isfinite(height) or height <= 0:
+            raise ValueError(f'catalog needs a positive height_mm for {label}')
+    press = data.get('extra_press_mm', 0)
+    if isinstance(press, bool) or not isinstance(press, (int, float)) or not math.isfinite(press) or not 0 <= press <= 10:
+        raise ValueError('extra_press_mm must be a finite number within 0..10')
+    return data
+
+
+def _project(locator, pixel, plane_z):
+    ray = np.array([(pixel[0] - locator.cx) / locator.fx, (pixel[1] - locator.cy) / locator.fy, 1.0])
+    direction = locator.R.T @ ray
+    origin = -locator.R.T @ locator.t
+    scale = (plane_z - origin[2]) / direction[2]
+    if not math.isfinite(scale) or scale <= 0:
+        raise ValueError('invalid camera-plane intersection')
+    return (origin + scale * direction)[:2]
+
+
+def locate_targets(bgr, depth, root, catalog=None, model=None, locator=None, min_contact_z=MIN_CONTACT_Z_M):
+    root = Path(root)
+    base = root / 'output/ik_resume_20261012'
+    catalog = catalog or load_catalog(root / 'config/object_catalog.json')
+    model = model or load_planar_model(root)
+    locator = locator or BoxLocator(base / 'multipose_review/camera_transform_candidate.json',
+                                    base / 'moved_box_target.json')
+    results = []
+    for found in classify_objects(bgr, depth):
+        label = found['label']
+        if label not in LABELS:
+            continue
+        entry = catalog['objects'][label]
+        top_mm = float(entry['height_mm'])
+        pixel = np.array(found['top_center_px']) - np.array(DEPTH_MINUS_TOP_CENTER_PX)
+        plane_z = TABLE_PLANE_Z - (REFERENCE_TOP_MM - top_mm) / 1000.
+        xy = _project(locator, pixel, plane_z) + locator.offset_xy
+        contact_z = (top_mm + float(catalog['cup_contact_offset_mm']) - float(catalog.get('extra_press_mm', 0))) / 1000.
+        radius = float(math.hypot(*xy))
+        problems = []
+        if not ENVELOPE_M[0] <= radius <= ENVELOPE_M[1]:
+            problems.append(f'radius {radius:.3f} m outside the {ENVELOPE_M[0]}-{ENVELOPE_M[1]} m pick envelope')
+        if contact_z < min_contact_z - 1e-9:
+            problems.append(f'contact height {contact_z * 1000:.1f} mm is below the {min_contact_z * 1000:.0f} mm floor of the motion code; this object cannot be picked')
+        inner = max(.12, radius - .040)
+        x, y = float(xy[0]), float(xy[1])
+        # 수직으로 닿지 않는 먼 물체는 손목을 조금 기울여 집는다(사용자 지시 2026-10-15). 닿는 가장 작은 기울기를 고른다.
+        # 집기 보정(+5mm 바깥쪽)과 위치 오차를 위해 반경 8mm 여유를 두고 검사한다.
+        pick_tilt = None
+        first_fail = None
+        for tilt in PICK_TILTS_DEG:
+            pitch = -math.pi / 2 + math.radians(tilt)
+            grow = (radius + PICK_REACH_MARGIN_M) / radius
+            fails = [(name, point) for name, point in (('inner approach', (x * grow * inner / radius, y * grow * inner / radius, .120)),
+                                                      ('approach 70 mm', (x * grow, y * grow, .070)), ('contact', (x * grow, y * grow, contact_z)))
+                     if not reachable(model, point, pitch)]
+            if first_fail is None and fails:
+                first_fail = fails[0]
+            if not fails:
+                pick_tilt = tilt
+                break
+        if pick_tilt is None:
+            problems.append(f'not reachable ({first_fail[0]}) even with {PICK_TILTS_DEG[-1]:g} deg tilt: {tuple(round(v, 3) for v in first_fail[1])}')
+        pickable = not problems          # 기하(작업 거리·도달)만 본 값이다. 아래 권고는 별도다.
+        if not entry.get('suction_verified'):
+            problems.append('suction not verified for this object')
+        if not entry.get('top_flat', True):
+            problems.append('top surface is not flat; vacuum seal is uncertain and the depth centre may be off')
+        results.append(dict(label=label, name=found['name'], slot=slot_for(label),
+                            target_xy=[x, y], contact_z=contact_z, radius_m=radius,
+                            pickable=pickable, problems=problems, pick_tilt_deg=pick_tilt,
+                            suction_verified=bool(entry.get('suction_verified')),
+                            top_center_px=found['top_center_px'], projection_pixel=[float(v) for v in pixel],
+                            catalog_height_mm=top_mm, measured_height_mm=found['height_mm'],
+                            usable_for_motion=False, physical_accuracy_verified=False))
+    return results

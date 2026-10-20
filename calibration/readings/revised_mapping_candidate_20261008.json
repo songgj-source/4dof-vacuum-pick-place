@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-10-08T12:50:48.774584",
+  "status": "revised direction hypothesis; provisional and independently not validated",
+  "runtime_applied": false,
+  "motor_writes": false,
+  "reference_pose_source": "calibration/readings/measured_pose_mapping_candidate_20261008_123010.json",
+  "independent_pose_source": "calibration/readings/independent_pose2_20261008_123941.json",
+  "zeros_present_pulse": {
+    "base": 2145,
+    "shoulder": 3923.5033326752437,
+    "elbow": 1141.230648300656,
+    "wrist_flex": 2082.478927793258
+  },
+  "directions": {
+    "base": -1,
+    "shoulder": -1,
+    "elbow": -1,
+    "wrist_flex": -1
+  },
+  "geometry": {
+    "upper_arm_m": 0.115,
+    "forearm_m": 0.135,
+    "wrist_to_contact_distance_m": 0.108,
+    "shoulder_height_above_table_m": 0.12,
+    "base_to_shoulder_forward_offset_m": 0.027
+  },
+  "independent_pose_residual_m": {
+    "height": -0.00983684150899225,
+    "horizontal": 0.008787384382928143
+  },
+  "limitations": [
+    "Zero angles derived from one measured pose with planar axial-link assumptions",
+    "Direction revision supported by one additional pose; no final motion calibration",
+    "Tool mounting offset and rotation unmeasured separately",
+    "Measurement uncertainties not quantified",
+    "Limits, URDF axes/frames and motor trajectory driver require integration verification"
+  ],
+  "pulse_convention": "controller Present_Position; homing offset not added"
+}

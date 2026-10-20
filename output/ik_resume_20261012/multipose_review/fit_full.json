@@ -1,0 +1,25 @@
+{
+ "offline": true,
+ "hardware_opened": false,
+ "physically_validated": false,
+ "n_poses": 8,
+ "new_zero_pulses": {
+  "shoulder": 3848.7515776461146,
+  "elbow": 1199.501173520953,
+  "wrist_flex": 2094.7255789750534
+ },
+ "old_zero_pulses": {
+  "shoulder": 3923.5033326752437,
+  "elbow": 1141.230648300656,
+  "wrist_flex": 2082.478927793258
+ },
+ "length_delta_m": {
+  "L1": -0.0016244351535642197,
+  "L2": -0.0024450359748343802,
+  "L3": -0.008032984324658592
+ },
+ "rms_residual_mm_before": 5.967225742639454,
+ "rms_residual_mm_after": 1.2756113128320223,
+ "max_residual_mm_after": 2.137626262799175,
+ "warning": null
+}

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "device_identity": "5B3D042407",
+  "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B3D042407-if00",
+  "baudrate": 1000000,
+  "pulse_convention": "Present_Position",
+  "status": "candidate_not_validated",
+  "validation": {
+    "mapping": false,
+    "limits": false,
+    "geometry": false,
+    "goal_coordinates": false
+  },
+  "validation_evidence": {},
+  "source_hashes": {
+    "urdf/vacuum_arm.urdf": "8dd07be1eb34a6d14590904df06de0a9cad6216f05f261d3f45940cf5e6db7b2",
+    "config/params.yaml": "61800496c955b6a9baaec039a6b826ee9b6b31924b0522de9f501b164ae26b80",
+    "calibration/tcp_measurement.json": "a3c644bda01b460c249f2cb6549ae1b3d540b5f4f9d66dcb799804be74715c3a",
+    "calibration/encoder_reference_candidate.json": "a96966dda05cc7c30fd519a92d753c162b55ec92a6eee99a331802020459261f",
+    "calibration/camera/camera_intrinsics.json": "8753d040bdbd5be8e85e773b59c193c18a607d61c2e8b26dbdc2ae2fd58f7d80",
+    "calibration/camera/validation/previous_hand_eye_not_applied.json": "dcb3b2e44775d57e381dd17456183fac3b0d3c2acd9c76ef3ac2b7317048f16d",
+    "calibration/readings/revised_mapping_candidate_20261008.json": "6ac90d912baf336f1eeb6706e45e69d5aa6b06756c69c40a1715aff77bf55030"
+  },
+  "joints": [
+    {
+      "name": "base",
+      "motor_id": 1,
+      "zero": 2104,
+      "direction": -1,
+      "raw_min": 765,
+      "raw_max": 3329,
+      "unwrap_min": 816.1046082853738,
+      "unwrap_max": 3472.852353879579,
+      "lower": -2.0369,
+      "upper": 2.0385,
+      "velocity": 0.03,
+      "acceleration": 0.1
+    },
+    {
+      "name": "shoulder",
+      "motor_id": 2,
+      "zero": 3923.5033326752437,
+      "direction": -1,
+      "raw_min": 0,
+      "raw_max": 4091,
+      "unwrap_min": 3772.6539857815646,
+      "unwrap_max": 6111.340381551112,
+      "lower": -3.3561,
+      "upper": 0.2314,
+      "velocity": 0.03,
+      "acceleration": 0.1
+    },
+    {
+      "name": "elbow",
+      "motor_id": 3,
+      "zero": 1141.230648300656,
+      "direction": -1,
+      "raw_min": 867,
+      "raw_max": 3099,
+      "unwrap_min": -908.66464689024,
+      "unwrap_max": 1286.0825276428143,
+      "lower": -0.2222,
+      "upper": 3.1445,
+      "velocity": 0.03,
+      "acceleration": 0.1
+    },
+    {
+      "name": "wrist_flex",
+      "motor_id": 4,
+      "zero": 2082.478927793258,
+      "direction": -1,
+      "raw_min": 1321,
+      "raw_max": 3207,
+      "unwrap_min": 869.6214952276157,
+      "unwrap_max": 3212.34966260797,
+      "lower": -1.7332,
+      "upper": 1.8605,
+      "velocity": 0.03,
+      "acceleration": 0.1
+    }
+  ],
+  "expected_registers": {
+    "base": {
+      "model": 777,
+      "min_limit": 765,
+      "max_limit": 3329,
+      "homing": 83
+    },
+    "shoulder": {
+      "model": 777,
+      "min_limit": 0,
+      "max_limit": 4091,
+      "homing": 2
+    },
+    "elbow": {
+      "model": 777,
+      "min_limit": 867,
+      "max_limit": 3099,
+      "homing": 2775
+    },
+    "wrist_flex": {
+      "model": 777,
+      "min_limit": 1321,
+      "max_limit": 3207,
+      "homing": 2153
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "label": "tape_measure",
+  "slot": {
+    "x_mm": 120.77456646083165,
+    "y_mm": -138.08773405918728,
+    "drop_z_mm": 59.07092326404773
+  },
+  "rim_height_mm": 55.0,
+  "obstacles": []
+}

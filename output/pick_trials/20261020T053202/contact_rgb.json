@@ -1,0 +1,128 @@
+{
+  "verdict": "unknown",
+  "display": "판정 불가",
+  "reason": "RGB center varies across frames",
+  "mode": "record_only",
+  "can_block_motion": false,
+  "physical_contact_confirmed": null,
+  "vacuum_seal_confirmed": null,
+  "confidence_calibrated": false,
+  "visible_gap_verified": false,
+  "scope": "red box,640x480 wrist view,historical contact reference",
+  "frame_count": 5,
+  "heuristic_version": "contact_rgb_v1",
+  "frames": [
+    {
+      "center_px": [
+        366.48428381842314,
+        228.53611358554366
+      ],
+      "reference_offset_px": [
+        9.179013137107404,
+        23.261609322125935
+      ],
+      "area_ratio": 0.9142994863952928,
+      "cup_edge_similarity": 0.10064888506726845,
+      "sharpness": 935.790492163435
+    },
+    {
+      "center_px": [
+        363.68339434014246,
+        223.34933286102256
+      ],
+      "reference_offset_px": [
+        6.378123658826723,
+        18.074828597604835
+      ],
+      "area_ratio": 0.8446054884231172,
+      "cup_edge_similarity": 0.1021914255787198,
+      "sharpness": 921.1471840415512
+    },
+    {
+      "center_px": [
+        365.1229976892649,
+        223.94699016958447
+      ],
+      "reference_offset_px": [
+        7.817727007949145,
+        18.67248590616674
+      ],
+      "area_ratio": 0.8487941093363031,
+      "cup_edge_similarity": 0.10918337431493952,
+      "sharpness": 918.4334442596953
+    },
+    {
+      "center_px": [
+        367.4779591604573,
+        228.60618470697534
+      ],
+      "reference_offset_px": [
+        10.172688479141584,
+        23.331680443557616
+      ],
+      "area_ratio": 0.8766683842228612,
+      "cup_edge_similarity": 0.10064096925531085,
+      "sharpness": 966.046136927978
+    },
+    {
+      "center_px": [
+        363.82945231182475,
+        223.74717070569415
+      ],
+      "reference_offset_px": [
+        6.52418163050902,
+        18.47266644227642
+      ],
+      "area_ratio": 0.8415637518075894,
+      "cup_edge_similarity": 0.10846711298978255,
+      "sharpness": 964.1983077451524
+    }
+  ],
+  "reference_center_px": [
+    357.30527068131573,
+    205.27450426341773
+  ],
+  "median_offset_px": [
+    7.817727007949145,
+    18.67248590616674
+  ],
+  "center_span_px": [
+    3.7945648203148608,
+    5.256851845952781
+  ],
+  "reference_path": "/home/song/ros2_vacuum_pick_place_ver2 (Copy 2)/output/ik_resume_20261012/pickup_twoaxis_p64_trial/before_suction_wrist.png",
+  "reference_sha256": "8ef19f060cf4b9b8f08017b6d85897e45275f21d526b330e4cbe4232c4ba35af",
+  "reference_status": "historical_contact_view_not_independently_validated",
+  "evidence": [
+    {
+      "image": "contact_rgb_frames/0000.png",
+      "host_capture_ns": 20209445431687,
+      "sha256": "32b2decb1b1ee37e55789b54d63117a7b73f2ba636bfb5317c2cc9a1900e5297"
+    },
+    {
+      "image": "contact_rgb_frames/0001.png",
+      "host_capture_ns": 20209481789679,
+      "sha256": "d22fdf5b753074dc930c8aa9b94c242b3ae81dd75f646e1a2917f7e9aa53d6dc"
+    },
+    {
+      "image": "contact_rgb_frames/0002.png",
+      "host_capture_ns": 20209513669090,
+      "sha256": "b4b50714531afd9dc3851a9e50631b0038557f6860993dea0d3fb08f80f35356"
+    },
+    {
+      "image": "contact_rgb_frames/0003.png",
+      "host_capture_ns": 20209545247691,
+      "sha256": "b9be591d52e15c8365751a7623d75cd7ed0622f8f344f6f39a749605c833ef33"
+    },
+    {
+      "image": "contact_rgb_frames/0004.png",
+      "host_capture_ns": 20209581149881,
+      "sha256": "38232c1bf9d42aa7d27ff0428fd8064d1de8e9a37d1abdc4f8c9c05aef8e2722"
+    }
+  ],
+  "candidate_contact_xyz": [
+    0.21692334365326546,
+    0.08291292962884324,
+    0.033920372853839365
+  ]
+}

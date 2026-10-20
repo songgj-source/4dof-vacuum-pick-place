@@ -1,0 +1,75 @@
+{
+  "timestamp": 506.244848566,
+  "joints": {
+    "base": {
+      "id": 1,
+      "model": 777,
+      "min_limit": 765,
+      "max_limit": 3329,
+      "homing": 83,
+      "mode": 0,
+      "torque": 1,
+      "goal": 2108,
+      "position": 2110,
+      "status": 0,
+      "radians_candidate": 0.05368932757599744
+    },
+    "shoulder": {
+      "id": 2,
+      "model": 777,
+      "min_limit": 0,
+      "max_limit": 4091,
+      "homing": 2,
+      "mode": 0,
+      "torque": 1,
+      "goal": 1824,
+      "position": 1823,
+      "status": 0,
+      "radians_candidate": -3.061053549966001
+    },
+    "elbow": {
+      "id": 3,
+      "model": 777,
+      "min_limit": 867,
+      "max_limit": 3099,
+      "homing": 2775,
+      "mode": 0,
+      "torque": 1,
+      "goal": 3018,
+      "position": 3018,
+      "status": 0,
+      "mapping_error": "elbow: raw position has no approved branch"
+    },
+    "wrist_flex": {
+      "id": 4,
+      "model": 777,
+      "min_limit": 1321,
+      "max_limit": 3207,
+      "homing": 2153,
+      "mode": 0,
+      "torque": 1,
+      "goal": 3075,
+      "position": 3075,
+      "status": 0,
+      "radians_candidate": -1.522508256336799
+    }
+  },
+  "read_retry_count": 0,
+  "read_retry_events": [],
+  "driver_state": "disarmed",
+  "hold_confirmed": false,
+  "hold_results": {},
+  "last_fault": null,
+  "hold_error": null,
+  "motor_writes": false,
+  "offline": false,
+  "torque_writes": false,
+  "home_reference_evidence": {
+    "user_confirmed_physical_home": true,
+    "date": "2026-10-19",
+    "source": "user correction: current posture is HOME",
+    "prior_reference_backup": "/home/song/ros2_vacuum_pick_place_ver2/output/resume_20261019/home_reference_before_user_confirmation.json",
+    "geometric_calibration_changed": false,
+    "physical_path_accuracy_verified": false
+  }
+}

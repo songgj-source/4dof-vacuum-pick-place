@@ -1,0 +1,13 @@
+{
+  "source": "사용자가 자로 잰 높이(2026-10-14). 깊이로 잰 높이는 약 ±3mm 오차가 있어 접촉 높이에는 쓰지 않는다.",
+  "extra_press_mm": 3,
+  "extra_press_basis": "사용자 요청(2026-10-15): 집을 때 기존 접촉 높이에서 3mm 더 아래로 눌러 밀착을 높인다. 집기 접촉 높이에만 적용하고 놓는 높이·벽 위 여유 계산(cup_contact_offset_mm)에는 쓰지 않는다.",
+  "cup_contact_offset_mm": -3.5,
+  "cup_contact_offset_basis": "빨간 정육면체: 실제 윗면 40mm, 성공한 집기의 접촉 높이 36.5mm. 다른 물체에는 같은 관계를 가정한 값이고 검증되지 않았다.",
+  "footprint_source": "사용자가 잰 가로×세로(2026-10-15): 흰 상자 5×7cm, 줄자 6.5×5.8cm. 빨간 정육면체 4×4cm. 크기를 모르는 물체는 반경 4cm를 가정한다.",
+  "objects": {
+    "red_cube":     {"height_mm": 40, "footprint_mm": [40, 40], "top_flat": true,  "suction_verified": true},
+    "white_box":    {"height_mm": 24, "footprint_mm": [50, 70], "top_flat": true,  "suction_verified": false},
+    "tape_measure": {"height_mm": 30, "footprint_mm": [65, 58], "top_flat": false, "suction_verified": false}
+  }
+}

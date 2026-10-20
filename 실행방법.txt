@@ -1,0 +1,2 @@
+cd /home/song/4dof_ik
+/home/song/miniconda3/envs/lerobot_312/bin/python scripts/sort_menu.py

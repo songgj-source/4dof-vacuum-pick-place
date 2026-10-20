@@ -1,0 +1,244 @@
+{
+  "hardware_opened": false,
+  "physically_validated": false,
+  "applied_to_execution_profile": false,
+  "units": "m; report errors in mm",
+  "shoulder_height_above_table_m": 0.12,
+  "original_geometry_m": [
+    0.115,
+    0.135,
+    0.11
+  ],
+  "eight_pose_geometry_m": [
+    0.11337556484643578,
+    0.13255496402516562,
+    0.10196701567534142
+  ],
+  "provenance": {
+    "poses_input.json": {
+      "source": "/home/song/ros2_vacuum_pick_place (Copy)/output/calib_multipose_20261012/poses_input.json",
+      "sha256": "93ae3cee670055124b1d8273a2f9e611b7fad4aed9d6f998e3e988410ed65fdf"
+    },
+    "poses_validation.json": {
+      "source": "/home/song/ros2_vacuum_pick_place (Copy)/output/calib_multipose_20261012/poses_validation.json",
+      "sha256": "dd3b223ece41035d60d1c4dd40df28b71f57a737b4a6c1b41594adc5720deeb9"
+    },
+    "fit_full.json": {
+      "source": "/home/song/ros2_vacuum_pick_place (Copy)/output/calib_multipose_20261012/fit_full.json",
+      "sha256": "8f3ce28666b5079464f474d467c8649a4e1b3f842565540c11b77fda9454cf47"
+    },
+    "fit_all10.json": {
+      "source": "/home/song/ros2_vacuum_pick_place (Copy)/output/calib_multipose_20261012/fit_all10.json",
+      "sha256": "f31ff240f8205c924f7dbee594b63a4d7fdb7a086d27b75821b700d1765b3af9"
+    },
+    "mapping_calibrated_candidate.json": {
+      "source": "/home/song/ros2_vacuum_pick_place (Copy)/output/calib_multipose_20261012/mapping_calibrated_candidate.json",
+      "sha256": "7103d5c5a58a3c9a8962c0d7c4c63baf8af3dd901ca1acfdfea9f44abf47803b"
+    }
+  },
+  "original_source_hashes_verified": true,
+  "training_before": {
+    "component_rms_mm": 5.967225742639458,
+    "maximum_planar_error_mm": 11.170713351925,
+    "poses": [
+      {
+        "pose": 1,
+        "radius_error_mm": -4.969728105390342,
+        "height_error_mm": 4.0238656082252495,
+        "planar_error_mm": 6.3945048185582465
+      },
+      {
+        "pose": 2,
+        "radius_error_mm": -6.532787282251151,
+        "height_error_mm": 0.49654499506428945,
+        "planar_error_mm": 6.551630835697764
+      },
+      {
+        "pose": 3,
+        "radius_error_mm": 0.3504159741049562,
+        "height_error_mm": 9.956768263032739,
+        "planar_error_mm": 9.962932580251856
+      },
+      {
+        "pose": 4,
+        "radius_error_mm": -6.389179137612583,
+        "height_error_mm": 1.1741485805783214,
+        "planar_error_mm": 6.496170790687231
+      },
+      {
+        "pose": 5,
+        "radius_error_mm": -7.8856472811730525,
+        "height_error_mm": 0.5636663810569403,
+        "planar_error_mm": 7.905767061595338
+      },
+      {
+        "pose": 6,
+        "radius_error_mm": 1.9268952713807352,
+        "height_error_mm": 10.205205768520505,
+        "planar_error_mm": 10.385525993646814
+      },
+      {
+        "pose": 7,
+        "radius_error_mm": -0.05578773613929,
+        "height_error_mm": 11.170574046098613,
+        "planar_error_mm": 11.170713351925
+      },
+      {
+        "pose": 8,
+        "radius_error_mm": -2.849672328984698,
+        "height_error_mm": 6.417549207078696,
+        "planar_error_mm": 7.021792520991878
+      }
+    ]
+  },
+  "training_after": {
+    "component_rms_mm": 1.2756113128320414,
+    "maximum_planar_error_mm": 2.2255529776590057,
+    "poses": [
+      {
+        "pose": 1,
+        "radius_error_mm": -0.5163339033957826,
+        "height_error_mm": -2.1260699863295955,
+        "planar_error_mm": 2.187869805671135
+      },
+      {
+        "pose": 2,
+        "radius_error_mm": -0.7801095935340285,
+        "height_error_mm": -1.8101916046904185,
+        "planar_error_mm": 1.9711328274917193
+      },
+      {
+        "pose": 3,
+        "radius_error_mm": 2.137626262799286,
+        "height_error_mm": -0.10670731187534255,
+        "planar_error_mm": 2.1402879455383808
+      },
+      {
+        "pose": 4,
+        "radius_error_mm": -2.0769928064632293,
+        "height_error_mm": 0.7994916749202996,
+        "planar_error_mm": 2.2255529776590057
+      },
+      {
+        "pose": 5,
+        "radius_error_mm": 1.0945772223953654,
+        "height_error_mm": 1.280955411160953,
+        "planar_error_mm": 1.6849172268005568
+      },
+      {
+        "pose": 6,
+        "radius_error_mm": -0.796254052452039,
+        "height_error_mm": 1.0018160794830477,
+        "planar_error_mm": 1.2797093315112924
+      },
+      {
+        "pose": 7,
+        "radius_error_mm": 0.6099836315475726,
+        "height_error_mm": 1.6256741725797497,
+        "planar_error_mm": 1.7363457449911346
+      },
+      {
+        "pose": 8,
+        "radius_error_mm": -0.532843748033418,
+        "height_error_mm": 0.2312337478421883,
+        "planar_error_mm": 0.5808541176228722
+      }
+    ]
+  },
+  "heldout_before": {
+    "component_rms_mm": 6.72909837398089,
+    "maximum_planar_error_mm": 10.048729621392756,
+    "poses": [
+      {
+        "pose": 9,
+        "radius_error_mm": 0.1815572532897214,
+        "height_error_mm": 10.04708932814047,
+        "planar_error_mm": 10.048729621392756
+      },
+      {
+        "pose": 10,
+        "radius_error_mm": -1.604576335502761,
+        "height_error_mm": 8.807464305152612,
+        "planar_error_mm": 8.952435015290133
+      }
+    ]
+  },
+  "heldout_after": {
+    "component_rms_mm": 1.9970825506943854,
+    "maximum_planar_error_mm": 3.898994399901658,
+    "poses": [
+      {
+        "pose": 9,
+        "radius_error_mm": -3.8953775738986285,
+        "height_error_mm": 0.1679014211736357,
+        "planar_error_mm": 3.898994399901658
+      },
+      {
+        "pose": 10,
+        "radius_error_mm": -0.43891616123015176,
+        "height_error_mm": 0.747362114438821,
+        "planar_error_mm": 0.8667165203729983
+      }
+    ]
+  },
+  "training_alternate_raw_hand_saved": {
+    "component_rms_mm": 6.062648798784672,
+    "maximum_planar_error_mm": 15.82172655852342,
+    "poses": [
+      {
+        "pose": 1,
+        "radius_error_mm": 1.3794651455800166,
+        "height_error_mm": 1.8498751552592925,
+        "planar_error_mm": 2.307587956701908
+      },
+      {
+        "pose": 2,
+        "radius_error_mm": 2.469648334957414,
+        "height_error_mm": 3.9594310838963405,
+        "planar_error_mm": 4.666503766898992
+      },
+      {
+        "pose": 3,
+        "radius_error_mm": -2.4439535569725224,
+        "height_error_mm": 15.631830420780757,
+        "planar_error_mm": 15.82172655852342
+      },
+      {
+        "pose": 4,
+        "radius_error_mm": -3.2650319503205183,
+        "height_error_mm": 5.788947887505779,
+        "planar_error_mm": 6.6462283500397
+      },
+      {
+        "pose": 5,
+        "radius_error_mm": 3.069908406684224,
+        "height_error_mm": 3.5389129455350026,
+        "planar_error_mm": 4.684895138795072
+      },
+      {
+        "pose": 6,
+        "radius_error_mm": 2.3658074921609207,
+        "height_error_mm": 7.797939130569976,
+        "planar_error_mm": 8.148920159999063
+      },
+      {
+        "pose": 7,
+        "radius_error_mm": -1.8484555576022688,
+        "height_error_mm": 13.156219059252127,
+        "planar_error_mm": 13.285438942069609
+      },
+      {
+        "pose": 8,
+        "radius_error_mm": -0.7121626394703262,
+        "height_error_mm": 1.0618660068327652,
+        "planar_error_mm": 1.278567574093878
+      }
+    ]
+  },
+  "limitations": [
+    "Height and radial distance only; base azimuth and cup contact normal untested.",
+    "raw_hand_saved differs from fitted raw; ruler/encoder simultaneity uncertain.",
+    "Ten-pose fit includes reserved poses; it has no independent holdout here.",
+    "No commanded movement error, path collision, camera target or suction success is validated."
+  ]
+}

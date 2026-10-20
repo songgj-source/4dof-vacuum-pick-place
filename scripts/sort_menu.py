@@ -1,0 +1,404 @@
+#!/usr/bin/env python3
+"""번호 메뉴로 물체 넣기·복귀·종료를 실행한다(실행 = 로봇이 움직인다).
+
+  /home/song/miniconda3/envs/lerobot/bin/python scripts/sort_menu.py
+
+목록에서 번호를 입력하면 그에 맞게 scripts/run_sort.py 등을 실행한다. 로봇이 움직이는 항목은 한 번 더 확인한다(Enter=실행, n=취소).
+사진은 매번 새로 찍어서 물체·트레이 좌표를 계산한다(run_sort.py가 한다). 이 파일은 명령을 고르고 부르기만 한다.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+PY = sys.executable
+OBJECTS = {'1': ('white_box', '흰 상자', 1), '2': ('red_cube', '빨간 정육면체', 2), '3': ('tape_measure', '줄자', 3)}
+COMMON = ['--acknowledge-unverified-suction', '--accept-uncertain-tray', '--tray-numbering', 'far_from_base',
+          '--attempts', '1', '--approach-tracking-limit', '100',
+          '--place-rate', '300', '--place-pulses-per-step', '4', '--home-rate', '300']   # 속도 우선(사용자 2026-10-19): 운반·후퇴 300, 틱당 4펄스(13.4ms), 자동 HOME 복귀 300
+TRAY_FRAME = (ROOT / 'output' / 'tray_frames' / 'latest_rgb.png', ROOT / 'output' / 'tray_frames' / 'latest_depth.npy')
+ITEMS = [
+    ('1', '흰 상자 → 1번 칸'),
+    ('2', '빨간 정육면체 → 2번 칸'),
+    ('3', '줄자 → 3번 칸'),
+    ('4', '세 물체 모두 넣기 (흰 상자 → 정육면체 → 줄자 순서)'),
+    ('5', '물체와 칸을 골라서 넣기'),
+    ('6', '계획만 보기 (카메라로 위치 계산, 로봇 안 움직임)'),
+    ('7', 'HOME으로 복귀'),
+    ('8', '종료 준비: 토크 끄기 (팔을 손으로 받친 상태에서)'),
+    ('9', '빈 트레이 위치 저장 (트레이가 비어 있을 때 한 번: 칸에 물체가 들어가도 칸 위치를 알 수 있게)'),
+    ('0', '나가기'),
+]
+
+
+
+def brief_message(message):
+    """화면 문구만 번역·요약하고 내부 판정용 원문은 유지한다."""
+    text = str(message or '')
+    names = {'white_box': ('흰 상자가', '흰 상자'), 'red_cube': ('빨간 정육면체가', '빨간 정육면체'),
+             'tape_measure': ('줄자가', '줄자')}
+    subject, name = next((pair for label, pair in names.items() if label in text), ('물체가', '물체'))
+    # 경계 수치를 원문에서 읽어 실제 적용 중인 제한과 같은 값을 안내한다.
+    radius = re.search(r'radius ([0-9.]+) m outside (?:the )?([0-9.]+)-([0-9.]+) m pick envelope', text)
+    if radius:
+        distance, lower, upper = (float(value) * 100 for value in radius.groups())
+        if distance < lower:
+            return f'{subject} 너무 가깝습니다({distance:g}cm, 최소 {lower:g}cm). 조금 멀리 놓으세요.'
+        if distance > upper:
+            return f'{subject} 너무 멉니다({distance:g}cm, 최대 {upper:g}cm). 로봇 쪽으로 옮기세요.'
+    translations = (
+        ('the tray moved since the stored frame', '트레이 위치 변경: 9번으로 다시 저장하세요.'),
+        ('not reachable', '도달 불가: 물체·트레이 위치를 조정하세요.'),
+        ('tray not found', '트레이 인식 실패: 트레이 전체가 보이게 하세요.'),
+        ('not found in the current camera view', f'{name} 인식 실패: 카메라 화면을 확인하세요.'),
+        ('not held', '집힘 확인 실패: 물체와 흡착컵을 확인하세요.'),
+        ('hold unconfirmed', '정지 유지 확인 실패: 팔 상태를 확인하세요.'),
+        ('hold not confirmed', '정지 유지 확인 실패: 팔 상태를 확인하세요.'),
+        ('hold is not settled', '팔이 안정되지 않았습니다. 팔 상태를 확인하세요.'),
+        ('hold changed', '정지 중 위치 변화 감지. 팔 상태를 확인하세요.'),
+        ('unexpected torque', '모터 토크 상태 이상: 전원과 팔 상태를 확인하세요.'),
+        ('pose outside phase tolerance', '목표 위치 오차 초과. 팔 상태를 확인하세요.'),
+        ('no devices found', '카메라 연결을 확인하세요.'),
+        ('device is absent', '장치 연결을 확인하세요.'),
+        ('cancelled', '사용자 요청으로 중단했습니다.'),
+    )
+    for needle, korean in translations:
+        if needle in text:
+            return korean
+    if 'is not pickable' in text:
+        return f'{name} 집기 조건 미충족. 물체 위치·윗면·흡착 상태를 확인하세요.'
+    uncertainty = re.search(r'uncertain by up to about ([0-9.]+) mm', text)
+    if uncertainty:
+        return f'칸 위치 오차 최대 약 {uncertainty[1]}mm'
+    for needle, korean in (
+        ('suction not verified', '흡착 성능 미확인'),
+        ('top surface is not flat', '윗면이 고르지 않아 흡착 불안정'),
+        ('pick_auto exited', '집기·놓기 중단. 팔 상태와 실행 기록을 확인하세요.'),
+    ):
+        if needle in text:
+            return korean
+    # 미등록 원인은 임의로 단정하지 않고 원문을 짧게 남긴다.
+    text = text.split(' / ', 1)[0]
+    return text if len(text) <= 140 else text[:137] + '…'
+
+
+def phase_label(name):
+    """분할 이동 단계는 같은 한국어 진행 문구로 묶는다."""
+    labels = (
+        ('place_raise_clear', '놓은 뒤 상승'), ('place_raise', '운반 높이로 상승'),
+        ('place_carry', '트레이로 운반'), ('place_lower', '칸으로 내리기'),
+        ('place_retire', '트레이에서 후퇴'), ('place_retreat', '놓은 뒤 후퇴'),
+        ('place_tilt', '손목 각도 조정'), ('approach', '물체에 접근'),
+        ('descent', '흡착 위치로 하강'), ('lift', '물체 들어 올리기'),
+        ('home', 'HOME 복귀'), ('return', '복귀'),
+    )
+    return next((label for prefix, label in labels if name.startswith(prefix)), name)
+
+
+def sort_command(label, slot=None, execute=True, use_tray_frame=True):
+    cmd = [PY, str(ROOT / 'scripts' / 'run_sort.py')]
+    if execute:
+        cmd += ['--execute', '--supported']
+    cmd += ['--object', label, *COMMON]
+    if slot is not None:
+        cmd += ['--slot', str(slot)]
+    if use_tray_frame and all(p.exists() for p in TRAY_FRAME):      # 저장한 빈 트레이 위치(밀렸으면 밀린 만큼 옮겨 쓴다). 칸에 물체가 들어가도 칸 위치를 안다
+        cmd += ['--tray-frame', str(TRAY_FRAME[0]), str(TRAY_FRAME[1])]
+    if label == 'white_box':                       # 흰 상자는 흰 책상과 섞여 집힘 판정이 틀린다: 기록만 하고 중단하지 않는다
+        cmd += ['--hold-check', 'record']
+    return cmd
+
+
+def live_view_running():
+    done = subprocess.run(['pgrep', '-f', 'live_view.py'], capture_output=True, text=True)
+    return bool(done.stdout.split())
+
+
+def confirm(text):
+    if live_view_running():
+        print('카메라 창(live_view.py)이 켜져 있습니다. 닫은 뒤 다시 실행하세요(카메라 충돌).')
+        return False
+    answer = input(f'{text}  [Enter=실행 / n=취소] ').strip().lower()
+    return answer not in ('n', 'no', 'ㅜ')
+
+
+HOME_RAW_FALLBACK = {'base': 2110, 'shoulder': 1823, 'elbow': 3018, 'wrist_flex': 3075}     # 파일을 못 읽을 때만(2026-10-19 기록)
+
+
+def load_home_raw(root=ROOT):
+    """return_home.py가 쓰는 HOME 기록(original_current_hold.json)을 그대로 읽는다. 예전엔 옛 HOME 값이 코드에 박혀 있어서
+    HOME을 다시 등록한 뒤(손목 2956 → 3075)에는 HOME에 둔 팔을 'HOME이 아니다'라고 판정해 메뉴가 아무것도 실행하지 않았다(2026-10-19)."""
+    try:
+        data = json.loads((Path(root) / 'output/ik_resume_20261012/original_current_hold.json').read_text())
+        home = {n: int(row['position']) for n, row in data['joints'].items()}
+        if set(home) == set(HOME_RAW_FALLBACK):
+            return home
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return dict(HOME_RAW_FALLBACK)
+
+
+HOME_RAW = load_home_raw()
+FOLD_NEAR_PULSES = 200       # 접힌 HOME 근처(모든 관절이 이 안): 토크를 켠 뒤 return_home이 접힌 채 HOME에 맞춘다
+HOME_NEAR_PULSES = 40         # 토크가 꺼진 팔이 HOME에 놓여 있다고 볼 허용 범위(펄스)
+
+
+def read_arm_state():
+    """servo_driver.py inspect(읽기 전용)로 관절별 (토크, 위치)를 읽는다. 실패하면 None."""
+    done = subprocess.run([PY, str(ROOT / 'scripts' / 'servo_driver.py'), 'inspect'], cwd=ROOT, capture_output=True, text=True)
+    return parse_inspect(done.stdout)
+
+
+def parse_inspect(text):
+    try:
+        data, _ = json.JSONDecoder().raw_decode(text[text.index('{'):])
+        return {name: (int(row['torque']), int(row['position'])) for name, row in data['joints'].items()}
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def classify_arm(state):
+    """'ok'(전부 토크 켜짐) / 'off_at_home'(전부 꺼짐, HOME 근처) / 'off_near_fold'(전부 꺼짐, 접힌 HOME 근처) / 'off_elsewhere'(전부 꺼짐, HOME 아님) / 'mixed' / 'unknown'."""
+    if not state or set(state) != set(HOME_RAW):
+        return 'unknown'
+    torques = {t for t, _ in state.values()}
+    if torques == {1}:
+        return 'ok'
+    if torques == {0}:
+        near = all(abs(state[n][1] - HOME_RAW[n]) <= HOME_NEAR_PULSES for n in HOME_RAW)
+        if near:
+            return 'off_at_home'
+        return 'off_near_fold' if all(abs(state[n][1] - HOME_RAW[n]) <= FOLD_NEAR_PULSES for n in HOME_RAW) else 'off_elsewhere'
+    return 'mixed'
+
+
+def ensure_torque():
+    """로봇을 움직이기 전에 서보 토크를 확인한다. 꺼져 있고 팔이 HOME에 있으면 붙잡을지 물어 처리한다. 움직여도 되면 True."""
+    state = classify_arm(read_arm_state())
+    if state == 'ok':
+        return True
+    if state == 'unknown':
+        print('   서보 상태를 읽지 못했습니다(USB 연결과 전원을 확인하세요).')
+        return False
+    if state == 'off_at_home':
+        print('   서보 토크가 꺼져 있습니다(전원이 한 번 끊겼을 수 있습니다). 팔은 HOME 위치에 놓여 있습니다.')
+        if input('   토크를 켜서 팔을 붙잡을까요? 팔을 손으로 받쳐 주세요.  [Enter=붙잡기 / n=취소] ').strip().lower() in ('n', 'no'):
+            return False
+        subprocess.run([PY, str(ROOT / 'scripts' / 'servo_driver.py'), 'hold', '--arm', '--supported'], cwd=ROOT, capture_output=True, text=True)
+        if classify_arm(read_arm_state()) != 'ok':
+            print('   토크를 켜지 못했습니다. 팔을 확인하세요.')
+            return False
+        print('   토크를 켜서 팔을 붙잡았습니다.')
+        return True
+    if state == 'off_near_fold':
+        print('   서보 토크가 꺼져 있고 팔이 접힌 HOME 근처에 있지만 조금 어긋나 있습니다. 토크를 켜서 붙잡은 뒤 HOME 자세로 맞춥니다.')
+        if input('   토크를 켜서 팔을 붙잡을까요? 팔을 손으로 받쳐 주세요.  [Enter=붙잡기 / n=취소] ').strip().lower() in ('n', 'no'):
+            return False
+        subprocess.run([PY, str(ROOT / 'scripts' / 'servo_driver.py'), 'hold', '--arm', '--supported'], cwd=ROOT, capture_output=True, text=True)
+        if classify_arm(read_arm_state()) != 'ok':
+            print('   토크를 켜지 못했습니다. 팔을 확인하세요.')
+            return False
+        print('   토크를 켜서 팔을 붙잡았습니다. HOME 자세로 맞춥니다.')
+        code, summary, _ = run_streaming([PY, str(ROOT / 'scripts' / 'return_home.py'), '--execute', '--supported', '--travel-rate', '150', '--tracking-limit', '32'])
+        done = bool(summary and summary.get('home_return_complete'))
+        print('   → HOME 자세로 맞췄습니다.' if done else f'   → HOME에 맞추지 못했습니다: {brief_message((summary or {}).get("error")) or code} (팔 위치를 확인하세요)')
+        return done
+    if state == 'off_elsewhere':
+        print('   서보 토크가 꺼져 있고 팔이 HOME 위치가 아닙니다. 팔을 손으로 받쳐 HOME 자세로 옮긴 뒤 다시 실행하세요.')
+    else:
+        print('   일부 서보만 토크가 켜져 있습니다. 팔을 받치고 8번으로 토크를 모두 끈 뒤 HOME에서 다시 시작하세요.')
+    return False
+
+
+def run_streaming(cmd):
+    """명령을 실행하고 진행 단계만 한 줄씩 보여 준다. 마지막 JSON 줄(결과)을 돌려준다."""
+    started = time.monotonic()
+    proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    last_json = None
+    last_error = None
+    previous_phase = None
+    for line in proc.stdout:
+        line = line.strip()
+        if not line.startswith('{') and 'error:' in line:
+            last_error = line.split('error:', 1)[1].strip()
+        if line.startswith('{"phase"'):
+            try:
+                phase = phase_label(json.loads(line)['phase'])
+                if phase != previous_phase:
+                    print('   ·', phase, flush=True)
+                    previous_phase = phase
+            except (ValueError, KeyError):
+                pass
+        elif line.startswith('{'):
+            try:
+                last_json = json.loads(line)
+            except ValueError:
+                pass
+            if line.startswith('{"plan"'):
+                plan = last_json.get('plan', {})
+                name = next((name for label, name, _ in OBJECTS.values() if label == plan.get('label')), plan.get('label'))
+                target = [round(v) for v in plan.get('manual_target_mm', [])]
+                print(f"   계획: {name} → {plan.get('slot_number')}번 칸, 목표 {target} mm", flush=True)
+                slots = plan.get('tray_slots') or {}
+                if slots:
+                    print('   트레이 칸 위치(로봇 기준 거리): ' + ', '.join(
+                        f"{k}번 {v['radius_m']:.3f}m" for k, v in sorted(slots.items())
+                    ), flush=True)
+                hidden_warnings = (
+                    'suction not verified for this object',
+                    'top surface is not flat;',
+                    'tray slot positions are uncertain by up to about ',
+                )
+                warnings = list(dict.fromkeys(
+                    brief_message(w) for w in plan.get('warnings', [])
+                    if not any(str(w).startswith(prefix) for prefix in hidden_warnings)
+                ))
+                if warnings:
+                    print('   주의: ' + ' / '.join(warnings), flush=True)
+    proc.wait()
+    if last_json is not None and last_error and not last_json.get('ok', True):
+        last_json['reason'] = f"{last_json.get('reason')} / {last_error}"
+    return proc.returncode, last_json, time.monotonic() - started
+
+
+def report(code, result, seconds):
+    ok = bool(result and result.get('ok')) and code == 0
+    print(f'   → {"성공" if ok else "실패"} ({seconds:.0f}초)')
+    if not ok:
+        reason = (result or {}).get('reason')
+        print('   이유:', brief_message(reason) if reason else f'종료 코드 {code}')
+    return ok
+
+
+def newest_result(since):
+    """이번 실행이 만든 가장 최근 pick_trials 결과(result.json). 없으면 None."""
+    folders = [d for d in (ROOT / 'output' / 'pick_trials').glob('2026*') if (d / 'result.json').exists() and d.stat().st_mtime >= since - 1]
+    if not folders:
+        return None
+    try:
+        return json.loads((max(folders, key=lambda d: d.stat().st_mtime) / 'result.json').read_text())
+    except ValueError:
+        return None
+
+
+def recover_home_if_placed(since):
+    """물체는 칸에 넣었는데(motion_cycle_complete) 자동 HOME 복귀만 실패한 경우: 복귀를 다시 시도하고 성공으로 본다."""
+    result = newest_result(since)
+    if not result or not result.get('motion_cycle_complete') or result.get('error'):
+        return False
+    print('   물체는 칸에 넣었지만 자동 HOME 복귀가 실패했습니다. HOME 복귀를 다시 시도합니다.')
+    code, summary, _ = run_streaming([PY, str(ROOT / 'scripts' / 'return_home.py'), '--execute', '--supported', '--travel-rate', '150', '--tracking-limit', '32'])
+    done = bool(summary and summary.get('home_return_complete'))
+    print('   → HOME 복귀 완료' if done else f'   → HOME 복귀 실패: {brief_message((summary or {}).get("error")) or code} (팔 위치를 확인하세요)')
+    return done
+
+
+def run_one(label, slot=None):
+    since = time.time()
+    code, result, seconds = run_streaming(sort_command(label, slot=slot))
+    if (code != 0 and 'the tray moved since the stored frame' in str((result or {}).get('reason', ''))
+            and any('--tray-frame' in part for part in sort_command(label, slot=slot))):
+        print('   트레이 위치 변경: 카메라로 다시 찾습니다. 실패하면 9번으로 다시 저장하세요.')
+        code, result, seconds = run_streaming(sort_command(label, slot=slot, use_tray_frame=False))
+    if report(code, result, seconds):
+        found = newest_result(since)
+        if found and found.get('placed_despite_retreat_error'):
+            print('   주의: 물체를 놓고 HOME 복귀했으나 후퇴 중 오류가 있었습니다.')
+        return True
+    return recover_home_if_placed(since)
+
+
+def put_one(label, name, slot):
+    print(f'\n[{name} → {slot}번 칸]')
+    if not confirm(f'{name}을(를) {slot}번 칸에 넣습니다. 팔 주변을 비웠는지 확인하세요.'):
+        print('취소했습니다.')
+        return False
+    if not ensure_torque():
+        return False
+    return run_one(label, slot=slot if slot != OBJECTS_DEFAULT[label] else None)
+
+
+OBJECTS_DEFAULT = {label: slot for label, _, slot in OBJECTS.values()}
+
+
+def choose_object():
+    for key, (label, name, slot) in OBJECTS.items():
+        print(f'   {key}) {name}')
+    pick = input('물체 번호: ').strip()
+    return OBJECTS.get(pick)
+
+
+def menu():
+    print('\n===== 물체 넣기 메뉴 =====')
+    for key, text in ITEMS:
+        print(f' {key}) {text}')
+    return input('번호 입력: ').strip()
+
+
+def main():
+    print('SO-101 물체 넣기. 사진은 실행할 때마다 새로 찍어서 좌표를 계산합니다.')
+    while True:
+        choice = menu()
+        if choice == '0':
+            print('종료합니다.')
+            return
+        if choice in OBJECTS:
+            label, name, slot = OBJECTS[choice]
+            put_one(label, name, slot)
+        elif choice == '4':
+            if not confirm('세 물체를 차례로 넣습니다(흰 상자 → 정육면체 → 줄자). 팔 주변을 비웠는지 확인하세요.'):
+                print('취소했습니다.')
+                continue
+            if not ensure_torque():
+                continue
+            for key in ('1', '2', '3'):
+                label, name, slot = OBJECTS[key]
+                print(f'\n[{name} → {slot}번 칸]')
+                if not run_one(label):
+                    print(f'{name}에서 멈췄습니다. 나머지는 실행하지 않았습니다. 원인을 확인한 뒤 해당 번호를 다시 고르세요.')
+                    break
+            else:
+                print('\n세 물체를 모두 넣었습니다.')
+        elif choice == '5':
+            picked = choose_object()
+            slot = input('칸 번호(1~3): ').strip()
+            if picked is None or slot not in ('1', '2', '3'):
+                print('잘못된 입력입니다.')
+                continue
+            label, name, _ = picked
+            put_one(label, name, int(slot))
+        elif choice == '6':
+            picked = choose_object()
+            if picked is None:
+                print('잘못된 입력입니다.')
+                continue
+            label, name, slot = picked
+            print(f'\n[{name} 계획만 보기: 로봇은 움직이지 않습니다]')
+            code, result, seconds = run_streaming(sort_command(label, execute=False))
+            print('   (계획만 보기를 끝냈습니다)' if code == 0 else f'   실패: {brief_message((result or {}).get("reason")) or "종료 코드 " + str(code)}')
+        elif choice == '7':
+            if confirm('HOME으로 복귀합니다.') and ensure_torque():
+                code, result, seconds = run_streaming([PY, str(ROOT / 'scripts' / 'return_home.py'), '--execute', '--supported', '--travel-rate', '150', '--tracking-limit', '32'])
+                done = bool(result and result.get('home_return_complete'))
+                print('   → 복귀 완료' if done else f'   → 복귀 결과: {brief_message((result or {}).get("error")) or code}')
+        elif choice == '9':
+            print('\n[빈 트레이 위치 저장: 카메라만 읽습니다]  트레이가 비어 있고(물체·케이블 없음) 칸이 모두 보여야 합니다.')
+            code, result, seconds = run_streaming([PY, str(ROOT / 'scripts' / 'save_tray_frame.py')])
+            print('   → 저장했습니다. 이제 칸에 물체가 들어가도 칸 위치를 압니다.' if code == 0 else f'   → 저장하지 못했습니다: {brief_message((result or {}).get("reason")) or "종료 코드 " + str(code)}')
+        elif choice == '8':
+            if confirm('토크를 끕니다. 팔을 손으로 받치세요(HOME 위치에서만 끄세요).'):
+                subprocess.run([PY, str(ROOT / 'scripts' / 'servo_driver.py'), 'disarm', '--supported'], cwd=ROOT)
+        else:
+            print('목록에 있는 번호를 입력하세요.')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        print('\n종료합니다.')
+        os._exit(0)

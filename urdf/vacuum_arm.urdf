@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!-- SO-101 4축 진공 팔 (config.py의 실측 링크 길이/관절 한계, kinematics.py의 FK 컨벤션과 일치).
+     base_link 원점 = base 회전축이 테이블 표면 위 47mm 인 지점. x 전방, y 좌, z 상.
+     shoulder/elbow/wrist는 +회전이 팔을 +x에서 +z 쪽(위)으로 든다 -> axis = -y. -->
+<robot name="so101_vacuum_arm">
+  <material name="link"><color rgba="0.05 0.55 0.56 1"/></material>
+  <material name="joint"><color rgba="0.17 0.23 0.24 1"/></material>
+  <link name="base_link">
+    <visual><origin xyz="0 0 0.0135" rpy="0 0 0"/><geometry><cylinder radius="0.024" length="0.122"/></geometry><material name="link"/></visual>
+  </link>
+  <link name="yaw_link">
+    <visual><origin xyz="0 0 0.075" rpy="1.5708 0 0"/><geometry><cylinder radius="0.021" length="0.044"/></geometry><material name="joint"/></visual>
+  </link>
+  <link name="shoulder_link">
+    <visual><origin xyz="0.0575 0 0" rpy="0 0 0"/><geometry><box size="0.115 0.03 0.022"/></geometry><material name="link"/></visual>
+  </link>
+  <link name="elbow_link">
+    <visual><origin xyz="0.0675 0 0" rpy="0 0 0"/><geometry><box size="0.135 0.026 0.02"/></geometry><material name="link"/></visual>
+  </link>
+  <link name="wrist_link">
+    <visual><origin xyz="0.0465 0 0" rpy="0 1.5708 0"/><geometry><cylinder radius="0.009" length="0.093"/></geometry><material name="link"/></visual>
+  </link>
+  <link name="tip_link"/>
+  <joint name="base" type="revolute">
+    <parent link="base_link"/><child link="yaw_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.0369" upper="2.0385" effort="3" velocity="2"/>
+  </joint>
+  <joint name="shoulder" type="revolute">
+    <parent link="yaw_link"/><child link="shoulder_link"/>
+    <origin xyz="0 0 0.075" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-3.3561" upper="0.2314" effort="3" velocity="2"/>
+  </joint>
+  <joint name="elbow" type="revolute">
+    <parent link="shoulder_link"/><child link="elbow_link"/>
+    <origin xyz="0.115 0 0" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-0.2222" upper="3.1445" effort="3" velocity="2"/>
+  </joint>
+  <joint name="wrist_flex" type="revolute">
+    <parent link="elbow_link"/><child link="wrist_link"/>
+    <origin xyz="0.135 0 0" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-1.7332" upper="1.8605" effort="3" velocity="2"/>
+  </joint>
+  <joint name="tip" type="fixed">
+    <parent link="wrist_link"/><child link="tip_link"/>
+    <origin xyz="0.110 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

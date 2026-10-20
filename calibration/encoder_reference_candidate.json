@@ -1,0 +1,168 @@
+{
+  "recorded_at": "2026-10-06T16:54:18.255793",
+  "source": "/home/song/SmolVLA_4dof/robot/hardware_profile.py",
+  "source_sha256": "72b7baffb11638696490693fb16a804741ec49c4c28b6fd2121c9adf40b24a9a",
+  "stored_LeRobot_source": "/home/song/SmolVLA_4dof/calibration/so101_vacuum_follower.json",
+  "stored_LeRobot_sha256": "3ae1ccddad90db8a75c947413901500d763cda99e3071d0b769866589f30833d",
+  "pose_description": "user-provided folded default/home posture; NOT all-joints-zero",
+  "photo": "/home/song/ros2_vacuum_pick_place/calibration/readings/user_default_pose_20261006_165418.png",
+  "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B3D042403-if00",
+  "joint_reference": {
+    "base": {
+      "zero_offset_pulse": 2130,
+      "direction": 1,
+      "range_min_pulse": 848,
+      "range_max_pulse": 3412,
+      "homing_offset_readback": 83,
+      "controller_range_registers": [
+        765,
+        3329
+      ],
+      "angle_range_rad_from_recorded_endpoints": [
+        -1.966563370069392,
+        1.966563370069392
+      ],
+      "physical_geometric_zero_verified_this_session": false
+    },
+    "shoulder": {
+      "zero_offset_pulse": 2997,
+      "direction": 1,
+      "range_min_pulse": 2,
+      "range_max_pulse": 4093,
+      "homing_offset_readback": 2,
+      "controller_range_registers": [
+        0,
+        4091
+      ],
+      "angle_range_rad_from_recorded_endpoints": [
+        -4.594272459717495,
+        1.6812429435226628
+      ],
+      "physical_geometric_zero_verified_this_session": false
+    },
+    "elbow": {
+      "zero_offset_pulse": 1320,
+      "direction": 1,
+      "range_min_pulse": 140,
+      "range_max_pulse": 2372,
+      "homing_offset_readback": -727,
+      "controller_range_registers": [
+        867,
+        3099
+      ],
+      "angle_range_rad_from_recorded_endpoints": [
+        -1.8100973297050567,
+        1.6137477888556946
+      ],
+      "physical_geometric_zero_verified_this_session": false
+    },
+    "wrist": {
+      "zero_offset_pulse": 1942,
+      "direction": -1,
+      "range_min_pulse": 1216,
+      "range_max_pulse": 3102,
+      "homing_offset_readback": -105,
+      "controller_range_registers": [
+        1321,
+        3207
+      ],
+      "angle_range_rad_from_recorded_endpoints": [
+        -1.7794177139473437,
+        1.1136700520049756
+      ],
+      "physical_geometric_zero_verified_this_session": false
+    }
+  },
+  "current_home_readings": [
+    {
+      "joint": "base",
+      "present_positions": [
+        2142,
+        2142,
+        2142,
+        2142,
+        2142
+      ],
+      "actual_positions": [
+        2225,
+        2225,
+        2225,
+        2225,
+        2225
+      ],
+      "torque_enabled": 0,
+      "angle_rad_using_preserved_profile": 0.14572817484913592,
+      "angle_deg_using_preserved_profile": 8.349609375,
+      "controller_matches_preserved_LeRobot_profile": true
+    },
+    {
+      "joint": "shoulder",
+      "present_positions": [
+        1824,
+        1824,
+        1824,
+        1824,
+        1824
+      ],
+      "actual_positions": [
+        1826,
+        1826,
+        1826,
+        1826,
+        1826
+      ],
+      "torque_enabled": 0,
+      "angle_rad_using_preserved_profile": -1.7962915026140858,
+      "angle_deg_using_preserved_profile": -102.919921875,
+      "controller_matches_preserved_LeRobot_profile": true
+    },
+    {
+      "joint": "elbow",
+      "present_positions": [
+        3053,
+        3053,
+        3053,
+        3053,
+        3053
+      ],
+      "actual_positions": [
+        2326,
+        2326,
+        2326,
+        2326,
+        2326
+      ],
+      "torque_enabled": 0,
+      "angle_rad_using_preserved_profile": 1.543184672612955,
+      "angle_deg_using_preserved_profile": 88.41796875,
+      "controller_matches_preserved_LeRobot_profile": true
+    },
+    {
+      "joint": "wrist",
+      "present_positions": [
+        2931,
+        2931,
+        2931,
+        2931,
+        2931
+      ],
+      "actual_positions": [
+        2826,
+        2826,
+        2826,
+        2826,
+        2826
+      ],
+      "torque_enabled": 0,
+      "angle_rad_using_preserved_profile": -1.3560390164909069,
+      "angle_deg_using_preserved_profile": -77.6953125,
+      "controller_matches_preserved_LeRobot_profile": true
+    }
+  ],
+  "all_controller_settings_match_preserved_profile": true,
+  "source_profile_geometric_zero_compatible_with_ROS_URDF_verified": false,
+  "runtime_active": false,
+  "motor_goal_or_torque_writes": false,
+  "calibration_applied": false,
+  "note": "Local copy of reference for diagnosis. Reconstructed actual pulses explicitly account for current homing offsets. Matching controller registers does not prove physical zero or compatibility with this ROS model."
+}

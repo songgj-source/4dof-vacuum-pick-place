@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>4축 진공흡착 로봇팔 Pick & Place</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+:root { --ink:#0b0b0b; --sub:#52514e; --muted:#8a8983; --line:#e2e1dc; --accent:#2a78d6; --bg2:#f6f6f3; --warn:#b4541a; }
+* { box-sizing: border-box; }
+body { font-family: 'NanumSquare_ac','Noto Sans CJK KR',sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.62; margin: 0; background: #fff; }
+h1 { font-size: 22pt; line-height: 1.3; margin: 0 0 6mm; letter-spacing: -0.02em; }
+h2 { font-size: 15pt; margin: 0 0 3.5mm; padding-bottom: 2mm; border-bottom: 2px solid var(--ink); letter-spacing: -0.01em; }
+h3 { font-size: 11.5pt; margin: 5mm 0 2mm; }
+p { margin: 0 0 2.6mm; }
+.page { page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.num { color: var(--accent); margin-right: 2mm; }
+figure { margin: 3mm 0 4mm; text-align: center; break-inside: avoid; }
+figure img { max-width: 100%; border-radius: 3px; }
+figcaption { font-size: 8.6pt; color: var(--sub); margin-top: 1.5mm; }
+table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 2mm 0 4mm; break-inside: avoid; }
+th, td { border-bottom: 1px solid var(--line); padding: 1.6mm 2mm; text-align: left; vertical-align: top; }
+th { background: var(--bg2); font-weight: 700; color: var(--sub); }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3mm; align-items: start; }
+.lead { font-size: 11pt; color: var(--ink); }
+.note { font-size: 8.8pt; color: var(--sub); background: var(--bg2); border-left: 3px solid var(--muted); padding: 2mm 3mm; margin: 2mm 0 3mm; }
+.warn { border-left-color: var(--warn); }
+.tag { display: inline-block; font-size: 8pt; padding: 0.3mm 2mm; border-radius: 10px; border: 1px solid var(--line); color: var(--sub); margin-right: 1mm; }
+.ok { color: #1b7f4f; border-color: #bfe3cf; background: #eef8f2; }
+.no { color: var(--warn); border-color: #f2cdb6; background: #fdf3ec; }
+.case { border: 1px solid var(--line); border-radius: 6px; padding: 3.5mm 4mm 2mm; margin: 0 0 4mm; break-inside: avoid; }
+.case h3 { margin-top: 0; }
+.case dl { display: grid; grid-template-columns: 17mm 1fr; gap: 1mm 3mm; margin: 0; }
+.case dt { font-weight: 700; color: var(--sub); font-size: 9pt; }
+.case dd { margin: 0; font-size: 9.6pt; }
+.cover { display: flex; flex-direction: column; justify-content: space-between; min-height: 262mm; }
+.cover .kicker { color: var(--accent); font-weight: 700; letter-spacing: 0.08em; font-size: 9pt; margin-bottom: 3mm; }
+.kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 3mm; margin: 4mm 0; }
+.kpi { background: var(--bg2); border-radius: 6px; padding: 3mm; }
+.kpi b { display: block; font-size: 15pt; line-height: 1.2; }
+.kpi span { font-size: 8.4pt; color: var(--sub); }
+.toc { columns: 2; font-size: 9.6pt; color: var(--sub); }
+.toc div { margin-bottom: 1mm; }
+.placeholder { border: 1.5px dashed var(--muted); border-radius: 6px; height: 40mm; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 9pt; text-align: center; padding: 3mm; }
+code { font-family: 'NanumGothicCoding', monospace; font-size: 8.8pt; background: var(--bg2); padding: 0 1mm; border-radius: 2px; }
+ul { margin: 0 0 3mm; padding-left: 5mm; } li { margin-bottom: 1mm; }
+</style>
+</head>
+<body>
+
+<!-- ============ 표지 ============ -->
+<section class="page cover">
+  <div>
+    <div class="kicker">ROBOTICS PORTFOLIO · 2026</div>
+    <h1>4축 진공흡착 로봇팔의<br>비전 기반 Pick &amp; Place 시스템 구현</h1>
+    <p class="lead">4축 로봇팔과 진공흡착 장치를 활용해 물체를 인식하고 트레이의 지정된 칸으로 옮기는 시스템을 구현했습니다. RGB-D 카메라의 관측값을 로봇 좌표로 변환하고, 역기구학으로 관절 목표를 계산하여 집기·운반·놓기·HOME 복귀를 연결했습니다.</p>
+    <div class="kpis">
+      <div class="kpi"><b>4축 + 흡착</b><span>STS3215 서보 4개 · 진공 펌프</span></div>
+      <div class="kpi"><b>3종 → 3칸</b><span>정육면체 · 흰 상자 · 줄자</span></div>
+      <div class="kpi"><b>53–83 s</b><span>10-20 실물 5회 한 사이클<br>(HOME 복귀 포함)</span></div>
+      <div class="kpi"><b>1.28 mm</b><span>기구학 보정 후 잔차 RMS<br>(8개 자세)</span></div>
+    </div>
+    <figure>
+      <img src="assets/after_release_slot1.png" style="width:72%">
+      <figcaption>실제 로봇이 흰 상자를 1번 칸에 놓은 직후의 탑뷰 사진 (2026-10-16, Astra 카메라)</figcaption>
+    </figure>
+  </div>
+  <div>
+    <div class="toc">
+      <div>1. 프로젝트 소개</div><div>2. 전체 시스템</div><div>3. 하드웨어</div><div>4. 소프트웨어</div>
+      <div>5. 문제 해결</div><div>6. 검증 결과</div><div>7. 한계와 개선</div><div>부록. 역할 · 실행 방법</div>
+    </div>
+    <p class="note">수치는 실행 기록(<code>output/</code>의 result.json·events.jsonl)과 보정 파일에서 직접 계산한 값입니다. 코드 시험 통과와 실물 동작 성공은 구분해서 적었습니다.</p>
+  </div>
+</section>
+
+<!-- ============ 1. 소개 ============ -->
+<section class="page">
+  <h2><span class="num">1</span>프로젝트 소개</h2>
+  <p>책상 위 물체 세 종류를 카메라로 찾고, 진공흡착 로봇팔로 집어 3칸 트레이의 정해진 칸에 넣는 시스템입니다. 칸은 기본 규칙(흰 상자 1번, 빨간 정육면체 2번, 줄자 3번)을 따르고, "빨간 상자 3번 칸에 넣어줘"처럼 명령으로 지정하면 명령을 우선합니다. 트레이는 매번 다른 위치에 놓을 수 있어서, 사이클마다 새로 촬영해 물체와 칸의 위치를 다시 계산합니다.</p>
+  <figure>
+    <img src="assets/topview_scene.png" style="width:66%">
+    <figcaption>HOME 자세에서 찍은 탑뷰 입력 영상. 왼쪽 아래가 로봇, 가운데가 손글씨 숫자를 쓴 3칸 트레이 (2026-10-20)</figcaption>
+  </figure>
+  <h3>목표와 조건</h3>
+  <table>
+    <tr><th style="width:28%">항목</th><th>내용</th></tr>
+    <tr><td>입력</td><td>고정 RGB-D 카메라 1대(탑뷰), 손목 카메라 1대, 명령(물체 이름, 선택적으로 칸 번호)</td></tr>
+    <tr><td>출력</td><td>물체를 지정 칸에 놓고 HOME 자세로 복귀</td></tr>
+    <tr><td>물체</td><td>빨간 정육면체 40×40×40 mm, 흰 상자 50×70×24 mm, 줄자 65×58×30 mm (자로 실측)</td></tr>
+    <tr><td>트레이</td><td>길이 285 mm, 바깥 폭 120 mm(안쪽 105 mm), 벽 높이 55 mm, 3칸</td></tr>
+    <tr><td>정밀도 요구</td><td>정육면체가 칸 안에서 옆으로 약 27 mm, 길이 방향으로 약 17 mm 여유뿐이라 칸 중심 오차가 20 mm면 벽에 닿습니다.</td></tr>
+    <tr><td>안전 원칙</td><td>계획 단계에서 도달·충돌을 먼저 검사합니다. 실패하면 다른 값으로 추측하지 않고 멈춥니다. 접촉·들기 속도는 흡착이 유지되도록 느리게 둡니다.</td></tr>
+  </table>
+  <h3>개발 범위</h3>
+  <ul>
+    <li><b>인식</b>: 깊이 기반 물체 검출, 색 분류, 트레이 칸·손글씨 숫자 인식</li>
+    <li><b>좌표·기구학</b>: 카메라–로봇 보정, 4축 평면 역기구학, 관절 영점·링크 길이 맞춤</li>
+    <li><b>모션</b>: 서보 버스 직접 제어, 단계별 게인 전환, 추종·충돌·통신 오류 감시</li>
+    <li><b>작업 흐름</b>: 집기 → 흡착 확인 → 운반·놓기 → HOME 복귀, 흡착 실패 시 다시 집기, 번호 메뉴</li>
+    <li><b>하드웨어</b>: ESP32 펌프 제어기 교체·펌웨어, 펌프 배선</li>
+  </ul>
+</section>
+
+<!-- ============ 2. 전체 시스템 ============ -->
+<section class="page">
+  <h2><span class="num">2</span>전체 시스템</h2>
+  <figure style="margin:1mm 0 2mm"><img src="assets/system_architecture.png" style="width:80%"></figure>
+  <p>PC 한 대가 모든 계산과 장치 제어를 맡습니다. ROS를 쓰지 않고 Python에서 Feetech 서보 버스를 직접 열어 목표 위치와 게인을 쓰고, 위치·상태 피드백을 매 틱(약 13 ms) 읽어 추종 오차와 충돌 높이를 감시합니다.</p>
+  <table>
+    <tr><th style="width:22%">장치</th><th style="width:26%">연결</th><th>역할</th></tr>
+    <tr><td>Orbbec Astra</td><td>USB · OpenNI2</td><td>탑뷰 RGB + 깊이(640×480). 물체·트레이 인식, 좌표 계산의 입력</td></tr>
+    <tr><td>손목 카메라</td><td>USB · V4L2 (MJPG)</td><td>흡착 직전 사진 5장, 20 mm 들기 후 사진으로 접촉 위치와 흡착 여부 기록</td></tr>
+    <tr><td>서보 어댑터 + STS3215 × 4</td><td>USB → 반이중 직렬 버스</td><td>ID1 base, ID2 shoulder, ID3 elbow, ID4 wrist_flex. 0–4095 pulse(1회전)</td></tr>
+    <tr><td>ESP32</td><td>USB(CP2102) 115200 baud</td><td><code>p</code> 흡착 / <code>d</code> 배기 300 ms 후 자동 정지 / <code>s</code> 정지 / <code>q</code> 식별</td></tr>
+    <tr><td>L9110S + 진공 펌프</td><td>GPIO26 → A-1A, GPIO25 → A-1B</td><td>펌프 정·역 구동. 전원은 6 V 배터리에서 공급</td></tr>
+  </table>
+  <h3>한 사이클의 프로세스 구성</h3>
+  <p>메뉴(<code>sort_menu.py</code>)가 실행기(<code>run_sort.py</code>)를 부릅니다. 실행기는 매 시도마다 ① 계획기(<code>plan_sort.py</code>)로 카메라만 읽어 작업 파일을 만들고 ② 집기·놓기(<code>pick_auto.py</code>)를 실행합니다. 서보 버스와 펌프를 모두 닫은 뒤 ③ HOME 복귀(<code>return_home.py</code>)를 별도 프로세스로 실행합니다. 집기 후 흡착이 확인되지 않으면 종료 코드 3으로 끝나고, 실행기가 처음부터 다시 시도합니다. 그 밖의 실패는 재시도하지 않고 멈춥니다.</p>
+  <p class="note">장치를 여는 프로세스와 계산만 하는 모듈을 분리했습니다. 인식·좌표·계획 모듈은 하드웨어를 import하지 않아서, 로봇 없이 저장된 영상으로 시험할 수 있습니다.</p>
+  <h3 style="margin-top:3mm">펌프 제어기 교체: ESP32 펌웨어 새로 작성 (2026-10-16)</h3>
+  <p style="font-size:9.3pt">ESP32를 새 보드로 바꾼 뒤 기존 펌프 프로그램이 동작하지 않았습니다. 기존 플래시를 백업(SHA256 기록)한 뒤, PC 쪽 Python이 기대하는 <code>p/d/s</code> 프로토콜과 흡착 응답에 맞춰 펌웨어를 새로 작성·업로드했습니다(해시 검증 통과). 식별·흡착·정지 응답과 실제 펌프 구동을 확인했고, 부팅 시 출력 LOW, 배기 300 ms 후 자동 정지로 만들었습니다.</p>
+
+</section>
+
+<!-- ============ 3. 하드웨어 ============ -->
+<section class="page">
+  <h2><span class="num">3</span>하드웨어</h2>
+  <div class="grid2">
+    <figure style="margin-top:0">
+      <img src="assets/after_release_slot1.png" style="max-height:40mm">
+      <figcaption>실제 조립된 로봇(흰색 출력물)의 탑뷰 모습</figcaption>
+    </figure>
+    <div class="placeholder">실제 조립 사진 자리<br>측면 전체 · 흡착컵·손목 카메라 확대<br>(assets/robot_photo.jpg)</div>
+  </div>
+  <h3 style="margin-top:3mm">배선도와 핀 연결</h3>
+  <div class="grid2">
+    <figure style="margin-top:0"><img src="assets/wiring_diagram.png" style="max-height:46mm"><figcaption>ESP32 · L9110S · 펌프 배선도</figcaption></figure>
+    <div>
+      <table style="margin-top:0">
+        <tr><th>신호</th><th>ESP32</th><th>빵판</th><th>연결처</th></tr>
+        <tr><td>펌프 방향 A</td><td>GPIO26</td><td>j10</td><td>L9110S A-1A</td></tr>
+        <tr><td>펌프 방향 B</td><td>GPIO25</td><td>j11</td><td>L9110S A-1B</td></tr>
+        <tr><td>UART RX</td><td>GPIO33</td><td>j12</td><td>서보 어댑터 TX</td></tr>
+        <tr><td>UART TX</td><td>GPIO32</td><td>j13</td><td>서보 어댑터 RX</td></tr>
+        <tr><td>공통 GND</td><td>GND</td><td>j5</td><td>(−) 레일</td></tr>
+      </table>
+      <p style="font-size:9pt">UART는 RX↔TX를 교차로 배선했지만, 펌웨어에 서보 중계를 구현하지 않아 현재는 쓰지 않습니다. 팔은 PC의 USB 서보 어댑터로 직접 제어합니다. GND 세 개는 같은 (−) 레일을 공유합니다.</p>
+    </div>
+  </div>
+  <h3>진공흡착부 CAD</h3>
+  <div class="grid3">
+    <figure style="margin:0"><img src="assets/cad_assembly_iso.png" style="max-height:44mm"><figcaption>진공흡착팔 조립체 (STEP 렌더링)</figcaption></figure>
+    <figure style="margin:0"><img src="assets/cad_wrist.png" style="max-height:44mm"><figcaption>손목 롤·피치 부품</figcaption></figure>
+    <figure style="margin:0"><img src="assets/wrist_contact_cube.png" style="max-height:44mm"><figcaption>실물 손목 카메라 시점: 스프링 흡착컵이 정육면체 윗면에 닿기 직전</figcaption></figure>
+  </div>
+  <p class="note">CAD 두 파일(<code>SO101_진공흡착팔_조립체_v4.stp</code>, <code>SO100_손목_롤피치_v16.stp</code>)은 공개된 SO-101 진공흡착 개조 설계를 받아 쓴 것이며 내용은 수정하지 않았습니다. 그림은 STEP을 메시로 변환해 렌더링했습니다. 실제 로봇은 흰색으로 출력했습니다. <b>직접 한 부분:</b> 손목 카메라 장착, ESP32 교체와 펌프 펌웨어, 펌프 배선, 흡착컵 끝점(손목 축에서 약 110 mm)과 물체·트레이 치수 실측</p>
+</section>
+
+<!-- ============ 4. 소프트웨어 ============ -->
+<section class="page">
+  <h2><span class="num">4</span>소프트웨어</h2>
+  <figure><img src="assets/software_pipeline.png" style="width:100%"></figure>
+  <h3>① 물체 인식</h3>
+  <p>깊이 영상에서 책상 평면을 맞추고, 평면 위로 솟은 덩어리를 물체 후보로 찾습니다. 덩어리 안의 색 비율로 빨간 정육면체·줄자(노랑)·흰 상자를 구분하고, 어느 쪽에도 충분히 맞지 않으면 추측하지 않고 <code>unknown</code>으로 둡니다. 깊이와 색 영상의 정합 오차 때문에 깊이 중심이 색 영상보다 일정하게 (+17, +5.5) px 치우쳐서, 그만큼 빼서 씁니다.</p>
+  <p><b>트레이</b>는 벽(55 mm)과 칸막이를 깊이 높이로 찾습니다. 칸 번호는 손글씨 숫자를 읽어 정합니다. 해상도가 낮아(획 1–3 px) 글자 모양 비교로는 2와 3이 뒤바뀌어서, 회전에 영향을 받지 않는 구조 특징을 씁니다. 곧은 획 하나면 1, 가운데 분기점이 있으면 3, 둘 다 아니면 2입니다. 세 칸이 서로 다른 1·2·3이 아니면 읽기를 거부합니다. 칸에 물체가 들어가 바닥이 가려질 때를 대비해 빈 트레이 프레임을 저장해 두고, 트레이가 밀리면 모서리 정합으로 회전·이동량을 구해 저장한 칸 위치를 옮겨 씁니다.</p>
+  <h3>② 좌표 변환</h3>
+  <p>물체 윗면 중심 픽셀을 카메라 내부 파라미터로 광선으로 바꾸고, 물체 윗면 높이의 평면과 만나는 점을 로봇 base 좌표 (x, y)로 씁니다. 카메라 외부 파라미터(자세)는 <b>팔을 자로 써서</b> 맞췄습니다. 팔을 70 mm 높이로 8곳에 띄우고, 정기구학(FK)으로 계산한 흡착컵 위치에 상자를 놓은 뒤, 팔을 HOME으로 치우고 촬영했습니다. 상자 픽셀과 FK 좌표 8쌍으로 자세만 맞췄습니다(내부 파라미터 고정). 접촉 높이 z는 자로 잰 물체 높이에 흡착컵 보정값(−3.5 mm)과 밀착용 추가 누름(3 mm)을 반영해 정합니다.</p>
+  <h3>③ 역기구학</h3>
+  <div class="grid2">
+    <div>
+      <p>base가 돌고 나머지 세 축(shoulder·elbow·wrist_flex)은 같은 수직 평면에서 움직이므로, 공구 각도 φ를 정하면 해석해로 풀 수 있습니다.</p>
+      <ul style="font-size:9.4pt">
+        <li>base = atan2(y, x), r = √(x²+y²)</li>
+        <li>손목 중심: dr = r − r₀ − L₃cosφ, dz = z − h₀ − L₃sinφ</li>
+        <li>cos θ₂ = (dr² + dz² − L₁² − L₂²) / (2L₁L₂)</li>
+        <li>θ₁ = atan2(dz, dr) − atan2(L₂sinθ₂, L₁+L₂cosθ₂), θ₃ = φ − θ₁ − θ₂</li>
+      </ul>
+    </div>
+    <table style="margin-top:0">
+      <tr><th>기하 값 (8자세 맞춤)</th><th class="r">값</th></tr>
+      <tr><td>L₁ 어깨–팔꿈치</td><td class="r">113.4 mm</td></tr>
+      <tr><td>L₂ 팔꿈치–손목</td><td class="r">132.6 mm</td></tr>
+      <tr><td>L₃ 손목–흡착 끝</td><td class="r">102.0 mm</td></tr>
+      <tr><td>r₀, h₀ 어깨 위치</td><td class="r">27 mm, 160 mm</td></tr>
+      <tr><td>FK 잔차 RMS (맞춤 전 → 후)</td><td class="r">5.97 → 1.28 mm</td></tr>
+    </table>
+  </div>
+  <p>두 해(팔꿈치 위·아래) 중 관절 한계 안의 해만 남기고, 경로를 샘플링해 링크 높이가 책상과 물체 위에 있는지 검사합니다. 관절 영점과 링크 길이는 8개 자세의 실측으로 다시 맞췄습니다.</p>
+  <h3>④ 접근·흡착 → ⑤ 운반·놓기 → ⑥ HOME 복귀</h3>
+  <table>
+    <tr><th style="width:20%">단계</th><th>동작</th><th style="width:30%">안전·정확도 장치</th></tr>
+    <tr><td>접근</td><td>120 mm, 70 mm 호버에서 차례로 정지. 300 pulse/s, 13.4 ms 틱</td><td>도착 위치 오차 5 mm 검사, 20 mm 이내면 1회 보정</td></tr>
+    <tr><td>하강·흡착</td><td>60 pulse/s 저속 하강, 펌프 ON, 접촉용 게인(P64)</td><td>최소 접촉 높이 10 mm, 손목 사진 5장 기록</td></tr>
+    <tr><td>들기·확인</td><td>20 mm 들어 올린 뒤 손목 사진 비교</td><td>붙지 않았으면 놓기 없이 복귀 → 재시도</td></tr>
+    <tr><td>운반</td><td>base 기준 극좌표 보간(각도 일정 속도, 반경·높이 선형). 운반 높이 105–115 mm</td><td>주변 물체 높이·반경을 장애물로 검사</td></tr>
+    <tr><td>놓기</td><td>칸 벽을 피해 공구를 최대 50° 기울임, 칸 안으로 하강 후 배기</td><td>벽 높이 55 mm + 물체 크기로 하강 높이 계산</td></tr>
+    <tr><td>HOME 복귀</td><td>수직 상승 → 접어서 복귀 → 도착 정지 확인 → 임시 게인 원복</td><td>전체 경로 사전 검사, 추종·취소·시간 제한</td></tr>
+  </table>
+</section>
+
+<!-- ============ 5. 문제 해결 ============ -->
+<section class="page">
+  <h2><span class="num">5</span>문제 해결</h2>
+  <p>실물 시험마다 서보 피드백(목표·실제 위치, 매 틱)과 단계별 결과를 파일로 남기고, 문제가 생기면 이 기록과 코드를 대조해 원인을 확인한 다음 고쳤습니다. 한 번에 한 변수만 바꿨고, 실물로 확인하지 못한 변경은 따로 표시했습니다.</p>
+
+  <div class="case">
+    <h3>5-1. HOME 복귀 중간 정지 <span class="tag no">실물 미검증</span></h3>
+    <dl>
+      <dt>문제</dt><dd>복귀 경로 중간에서 정지와 재출발이 발생했습니다. 팔이 한 번 멈췄다가 다시 출발하면서 동작이 끊기고, 다시 출발할 때 떨림이 생길 여지가 있었습니다.</dd>
+      <dt>분석</dt><dd>실행 기록과 코드를 분석해 중간 경유점의 정지 확인 및 P 게인 전환이 원인임을 확인했습니다. 기존 절차는 <i>중간점 이동 → 정지 확인 → P48에서 P32로 전환 → 재인계 → HOME 이동</i>이었습니다. 10-20 시행 3회의 기록에서 중간점 정지 구간은 매번 <b>2.24–2.25 s</b>였습니다(아래 그림).</dd>
+      <dt>수정</dt><dd>이를 연속 명령 스트림으로 변경했습니다. 출발할 때 선택한 P 게인을 HOME까지 유지합니다. 1600 pulse를 넘는 복귀는 두 구간으로 나누되 중간점에서 멈추지 않습니다. 전체 경로의 관절 범위와 링크 높이는 명령 전에 검사하고, 이동 중 피드백·취소·시간 제한 검사는 그대로 둡니다. 속도, 틱 주기, HOME 값은 바꾸지 않았습니다.</dd>
+      <dt>검증</dt><dd>모의 시험으로 중간 정지 제거와 오류 시 중단 처리를 확인했습니다. 변경 후 실제 로봇의 연속 복귀와 떨림은 추가 검증 대상으로 남겼습니다. P48을 유지한 채 접는 구간의 추종 성능도 확인해야 합니다.</dd>
+    </dl>
+    <figure style="margin-bottom:0"><img src="assets/home_return_stop.png" style="width:92%"><figcaption>변경 전 실제 복귀 기록(10-20 05:19 시행)의 어깨 엔코더. 두 구간 사이에서 2.24 s 동안 명령이 없습니다.</figcaption></figure>
+  </div>
+
+  <div class="case">
+    <h3>5-2. 좌표 오차: 먼 위치일수록 옆으로 어긋나는 집기 <span class="tag ok">실물 확인</span></h3>
+    <dl>
+      <dt>문제</dt><dd>로봇에서 먼 물체일수록 흡착컵이 윗면 중앙에서 옆으로 벗어났습니다. 흡착 순간의 손목 사진으로 10곳을 재 보니 가까운 곳은 약 2 mm였고, 0.26 m 이상에서는 10–16.5 mm였습니다.</dd>
+      <dt>분석</dt><dd>오차가 위치에 따라 1차식으로 늘어났습니다(1차식 잔차 RMS 1.8 mm). 무작위 오차가 아니라 카메라 좌표와 팔 모델 사이의 계통 오차라는 뜻입니다. 이후 카메라를 앞으로 3.8 cm 옮기고 방향도 틀면서 기존 보정이 모두 맞지 않게 됐습니다. 눈대중과 자 실측만으로는 카메라 위치를 정확히 잴 수 없었습니다.</dd>
+      <dt>수정</dt><dd>팔의 FK 좌표를 기준 삼아 카메라 자세를 8점으로 다시 맞췄습니다(맞춤 RMS 3.0 mm, 교차검증 RMS 6.2 mm, 최대 8.2 mm). 팔 base 영점은 호버 시험으로 2145 → 2104 pulse로 고쳤습니다. 관절 영점과 링크 길이도 8개 자세로 다시 맞춰 FK 잔차를 5.97 → 1.28 mm로 줄였습니다. 옛 카메라 기준 보정값은 서로 겹치지 않도록 0으로 끄고, 원래 값은 되돌릴 수 있게 따로 보관했습니다.</dd>
+      <dt>검증</dt><dd>재보정 후 실제 집기에서 흡착컵이 상자 중앙에 닿는 것을 확인했습니다. 10-20 시행 5회의 하강 중 보정량은 1.5–2.4 mm였습니다. 앞뒤 방향 보정량은 실험으로 정했습니다. 0 mm에서는 6 mm 짧아도 성공했고, +10 mm에서는 6.5 mm 넘어가 실패했으며, +5 mm에서는 오차가 0.1 px로 성공했습니다.</dd>
+    </dl>
+    <figure style="margin-bottom:0"><img src="assets/pick_lateral_error.png" style="width:92%"></figure>
+  </div>
+
+  <div class="case">
+    <h3>5-3. 흡착 확인: 압력 센서 없이 집힘 판단 <span class="tag ok">실패 경로 실물 확인</span></h3>
+    <dl>
+      <dt>문제</dt><dd>펌프 명령에 대한 응답은 "명령을 받았다"는 뜻일 뿐, 물체가 붙었는지는 알려 주지 않습니다. 실제로 물체가 붙지 않은 채 빈 컵으로 운반·놓기까지 진행한 시행이 있었습니다.</dd>
+      <dt>분석</dt><dd>흡착컵과 손목 카메라는 함께 움직입니다. 물체가 붙었으면 들어 올려도 화면에서 같은 자리·같은 크기로 남고, 붙지 않았으면 책상에 남아 화면에서 작아지고 자리가 옮겨집니다.</dd>
+      <dt>수정</dt><dd>접촉 직전 사진과 20 mm 들기 후 사진에서 물체 덩어리의 면적과 위치를 비교합니다. 붙지 않았다고 판정하면 놓기 없이 HOME으로 돌아가 종료 코드 3을 내고, 실행기가 카메라로 물체를 다시 찾아 새로 집습니다.</dd>
+      <dt>검증</dt><dd>물체가 없는 자리에서 실패 판정 → 복귀 경로가 실물에서 동작했습니다. 다만 흰 책상 위의 흰 상자는 덩어리로 분리되지 않아 "물체 없음"으로 오판했습니다(실제로는 들렸음). 그래서 기본값은 판정을 기록만 하는 모드로 두었습니다. <b>한계로 남은 항목입니다.</b></dd>
+    </dl>
+  </div>
+
+  <div class="case">
+    <h3>5-4. 모터 떨림 <span class="tag ok">운반 떨림 실물 해소</span> <span class="tag no">접근 떨림 일부 남음</span></h3>
+    <dl>
+      <dt>문제</dt><dd>물체를 들고 운반할 때 팔이 약 6 Hz로 떨렸고, 접근 구간에서도 약 7 Hz의 흔들림이 기록됐습니다.</dd>
+      <dt>분석</dt><dd>운반 떨림은 base가 느리게 돌 때 가장 컸습니다. 직선(현) 경로는 중간에 반경이 줄었다 늘어서 base 각속도가 들쭉날쭉했고, 저속에서 stick-slip이 생겼습니다. 여기에 시험용으로 올려 둔 base 임시 게인 P32가 겹쳤습니다. 접근 떨림은 P48을 지정한 실행에서 어깨 추종 오차의 고주파 성분 RMS가 1.87 pulse(7.1 Hz)였습니다.</dd>
+      <dt>수정</dt><dd>base 게인을 기본값 P16으로 되돌리고, 운반 경로를 base 기준 극좌표 보간으로 바꿔 base가 일정 속도로 돌게 했습니다. 접근은 P32로 낮추고 명령 주기를 13.4 ms 틱(300 pulse/s)으로 맞췄습니다.</dd>
+      <dt>검증</dt><dd>운반 떨림은 실물에서 해소된 것을 확인했습니다. 접근은 P만 바꾼 비교에서 0.42 pulse로 줄었지만, 다음 반복에서 1.25로 변동해 완전히 해결했다고 판단하지 않았습니다. 같은 조건에서 300 pulse/s(13.4 ms 틱)는 어깨 RMS 0.46–0.52로 4회 모두 보정 없이 5 mm 안에 도착했고, 150 pulse/s(26.7 ms 틱)는 1.34–1.47이었습니다.</dd>
+    </dl>
+  </div>
+
+  <div class="case">
+    <h3>5-5. 트레이 방향 오인으로 물체가 칸 벽에 걸림 <span class="tag ok">수정 후 실물 성공</span></h3>
+    <dl>
+      <dt>문제</dt><dd>정육면체를 2번 칸에 놓을 때 칸 벽에 닿아 떨어졌습니다.</dd>
+      <dt>분석</dt><dd>깊이 영상에 트레이 위쪽 1/3의 벽 조각만 보였고, 조각이 거의 정사각형이었습니다. 그래서 조각의 주성분 방향(PCA)으로 구한 트레이 긴 축이 실제보다 12° 틀어졌습니다(164.7° vs 약 177°). 칸 2 중심이 칸 왼쪽 벽 옆으로 계산됐고, 칸 간격도 86/95 mm로 불균형했습니다.</dd>
+      <dt>수정</dt><dd>색 영상에서 판지 실루엣(길이:폭 2.4)의 긴 축을 구합니다. 벽 조각이 길쭉하고 실루엣과 15° 이내일 때만 기존 방식을 그대로 쓰고, 둘 다 애매하면 방향을 추측하지 않고 거부합니다.</dd>
+      <dt>검증</dt><dd>같은 사진에서 칸 2 중심이 칸 한가운데로 옮겨졌습니다. 트레이 위치를 바꾼 뒤 흰 상자 → 1번 칸, 정육면체 → 2번 칸 실물 시험에 성공했습니다.</dd>
+    </dl>
+  </div>
+
+  <div class="case">
+    <h3>5-6. 정상 복귀가 실패로 기록되던 문제 <span class="tag ok">실물 확인</span></h3>
+    <dl>
+      <dt>문제</dt><dd>HOME에 잘 돌아왔는데도 "HOME 허용 오차 8 pulse 초과"로 기록되어 연속 작업이 멈췄습니다. 이틀 동안 73건이었습니다.</dd>
+      <dt>분석</dt><dd>73건 모두 어깨가 HOME 기록값(1840)보다 9–14 pulse 낮은 곳에서 안정적으로 멈췄습니다. 처음 기록한 어깨 값이 중력 하중 때문에 물리적으로 닿을 수 없는 값이었습니다. 또 복귀 합격선(8 pulse)이 다음 사이클 시작 허용선(32 pulse)보다 엄격해서, 안정적으로 멈춰도 실패로 판정되는 구조였습니다.</dd>
+      <dt>수정</dt><dd>실제로 쉬는 자세(2110/1823/3018/3075)로 HOME을 다시 등록했습니다. 판정은 8 pulse 이내면 정확, 24 pulse 이내면 근접(성공으로 기록하고 편차를 남김), 그 이상이면 실패로 나눴습니다.</dd>
+      <dt>검증</dt><dd>재등록 후 복귀 104건이 모두 8 pulse 이내였습니다.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ 6. 검증 결과 ============ -->
+<section class="page">
+  <h2><span class="num">6</span>검증 결과</h2>
+  <h3>동작 영상</h3>
+  <div class="grid2">
+    <div>
+      <p>흰 상자를 1번 칸에 넣는 한 사이클을 Astra 탑뷰로 녹화했습니다(2026-10-16, 실제 시간 약 85 s). 단계마다 자막을 넣은 2배속 영상과 README용 4배속 GIF를 함께 제공합니다.</p>
+      <ul style="font-size:9.4pt">
+        <li><code>media/demo_pick_place_2x.mp4</code> (42 s)</li>
+        <li><code>media/demo_pick_place_4x.gif</code></li>
+      </ul>
+      <p style="font-size:9pt;color:var(--sub)">자막의 단계 구분은 영상 프레임 시각과 서보 이벤트 기록의 시각을 맞춰 넣었습니다. 이 영상에는 HOME 복귀 장면이 없습니다(복귀는 별도 프로세스로 기록).</p>
+    </div>
+    <figure style="margin-top:0"><img src="assets/after_release_slot1.png"><figcaption>영상 마지막 장면: 흰 상자가 1번 칸 안에 놓임</figcaption></figure>
+  </div>
+
+  <h3>실행 횟수와 결과 (2026-10-20, 5회)</h3>
+  <table>
+    <tr><th>시각(UTC)</th><th>물체 → 칸</th><th class="r">접근~들기</th><th class="r">놓기</th><th class="r">HOME</th><th class="r">합계</th><th>사이클·해제·복귀</th><th>칸 안착(육안)</th></tr>
+    <tr><td>05:19</td><td>흰 상자 → 1</td><td class="r">29.5 s</td><td class="r">37.9 s</td><td class="r">10.5 s</td><td class="r">83.5 s</td><td>완료</td><td>☐ 기입</td></tr>
+    <tr><td>05:30</td><td>흰 상자 → 1</td><td class="r">32.0 s</td><td class="r">37.2 s</td><td class="r">10.5 s</td><td class="r">82.4 s</td><td>완료</td><td>☐ 기입</td></tr>
+    <tr><td>05:32</td><td>정육면체 → 2</td><td class="r">24.7 s</td><td class="r">16.2 s</td><td class="r">11.2 s</td><td class="r">61.8 s</td><td>완료</td><td>☐ 기입</td></tr>
+    <tr><td>05:33</td><td>줄자 → 3</td><td class="r">25.5 s</td><td class="r">20.7 s</td><td class="r">6.0 s</td><td class="r">53.2 s</td><td>완료</td><td>☐ 기입</td></tr>
+    <tr><td>05:44</td><td>정육면체 → 2</td><td class="r">27.1 s</td><td class="r">15.7 s</td><td class="r">7.6 s</td><td class="r">57.4 s</td><td>완료</td><td>☐ 기입</td></tr>
+  </table>
+  <p style="font-size:9pt">합계는 집기 시작부터 놓기 후퇴까지 기록된 시간(사진 확인·운반 계획 포함)에 HOME 복귀 이동 시간을 더한 값입니다. HOME 시간은 복귀 이벤트 기록의 처음과 끝 시각 차이입니다. 앞의 세 회는 중간 경유점을 거쳤고, 뒤의 두 회는 출발 자세가 가까워 한 구간으로 복귀했습니다.</p>
+  <p class="note warn">실행 기록의 <code>physical_pick_success</code> 값은 비어 있습니다. 압력 센서와 칸 안착 판정이 없기 때문입니다. "사이클·해제·복귀 완료"는 로봇이 계획한 동작을 오류 없이 마쳤다는 뜻이고, 물체가 칸에 들어갔다는 뜻은 아닙니다. 칸 안착은 영상·사진·육안으로 확인해 마지막 열에 따로 적습니다.</p>
+  <figure><img src="assets/cycle_time.png" style="width:94%"></figure>
+
+  <h3>위치 정확도 지표</h3>
+  <table>
+    <tr><th style="width:42%">지표</th><th class="r" style="width:18%">값</th><th>측정 방법</th></tr>
+    <tr><td>기구학 모델 잔차 (영점·링크 맞춤 후)</td><td class="r">RMS 1.28 mm<br>최대 2.14 mm</td><td>8개 자세의 FK 위치와 기준 위치 비교 (맞춤 전 RMS 5.97 mm)</td></tr>
+    <tr><td>카메라 → 로봇 좌표 변환</td><td class="r">교차검증 RMS 6.2 mm<br>최대 8.2 mm</td><td>팔 FK 8점 중 하나씩 빼고 맞춘 뒤 뺀 점 예측</td></tr>
+    <tr><td>접촉 순간 옆 방향 오차 (보정 전)</td><td class="r">−1.2 – 16.5 mm</td><td>손목 카메라 접촉 사진, 10곳, 반경에 비례</td></tr>
+    <tr><td>하강 중 위치 보정량 (10-20, 5회)</td><td class="r">1.5 – 2.4 mm</td><td>엔코더 기반 FK와 목표의 차이</td></tr>
+    <tr><td>접근 도착 기준</td><td class="r">5 mm</td><td>넘으면 1회 보정, 다시 넘으면 정지</td></tr>
+  </table>
+  <p class="note">위 정확도는 엔코더 기반 FK와 카메라로 계산한 값입니다. 자나 외부 측정 장비로 흡착컵 끝 위치를 직접 잰 값이 아니므로, 실제 공구 끝 오차는 이보다 클 수 있습니다.</p>
+
+  <h3>개발 과정의 시간 변화</h3>
+  <p>집기 단독 사이클은 초기 207 s(2026-10-12)였습니다. 공간 이동 구간만 빠르게 하고 접근을 연속 경로로 바꿔 약 100–128 s로 줄였습니다. 이후 놓기와 HOME 복귀를 붙인 전체 사이클이 53–83 s입니다(10-20). 접촉·들기 속도는 흡착 유지를 위해 처음부터 올리지 않았습니다. 들기 속도를 두 배로 올렸을 때 상자가 들리지 않은 기록이 있습니다.</p>
+</section>
+
+<!-- ============ 7. 한계와 개선 ============ -->
+<section class="page">
+  <h2><span class="num">7</span>한계와 개선</h2>
+  <h3>아직 실물 검증하지 않은 변경</h3>
+  <table>
+    <tr><th style="width:34%">변경</th><th>검증된 범위</th><th style="width:30%">남은 확인</th></tr>
+    <tr><td>HOME 복귀 연속 명령 스트림 (10-20)</td><td>모의 시험: 중간 정지 제거, 오류 시 중단</td><td>실제 연속 복귀, P48 유지 시 접는 구간의 떨림·추종</td></tr>
+    <tr><td>접근 보정 직전 정지 인계 개선 (10-19)</td><td>모의 시험</td><td>하중 관절 3–6 pulse 정적 오차에서 실제 인계</td></tr>
+    <tr><td>기울이기·운반 묶음 실행</td><td>모의 서보 통합 시험</td><td>물체를 든 상태의 반복 시간 측정</td></tr>
+  </table>
+  <h3>인식의 한계</h3>
+  <ul>
+    <li>색 비율로 분류하므로 밝은 무채색 물체는 흰 상자와 구분하지 못합니다. 조명이 바뀌면 기준을 다시 맞춰야 합니다.</li>
+    <li>손글씨 숫자 인식은 지금 필체(검은 펜, 3의 가운데가 뾰족하게 만나는 모양)에서만 확인했습니다.</li>
+    <li>트레이 벽이 잘 보이지 않으면 칸 바닥 방식으로 넘어가는데, 이때 칸 중심 불확실도가 최대 약 25 mm입니다.</li>
+  </ul>
+  <h3>흡착의 한계</h3>
+  <ul>
+    <li>압력 센서가 없어 흡착을 직접 확인하지 못합니다. 손목 사진 판정은 한 조명·한 책상에서 맞춘 잠정 기준이고, 흰 상자에서 오판했습니다.</li>
+    <li>흡착은 흡착 명령 뒤 정지·배기 명령이나 리셋 전까지 유지됩니다. 통신이 끊겨도 자동으로 멈추지 않으므로, 운반 중 USB가 재연결되면 물체가 떨어질 수 있습니다.</li>
+    <li>윗면이 평평한 정육면체에서만 흡착 성능을 확인했습니다. 흰 상자와 줄자는 실물로 옮겼지만, 접촉 높이 보정값은 정육면체 기준을 그대로 가정했습니다.</li>
+  </ul>
+  <h3>작업 범위</h3>
+  <ul>
+    <li>집기 반경은 약 0.16–0.30 m입니다. 범위 밖의 물체나 칸은 계획 단계에서 거부합니다.</li>
+    <li>먼 물체는 공구를 최대 20° 기울여 집습니다. 기울인 집기는 수직 집기보다 도착 허용 오차가 큽니다(8 mm).</li>
+  </ul>
+  <h3>다음 개선 방향</h3>
+  <ol style="padding-left:5mm">
+    <li><b>HOME 연속 복귀 실물 검증</b>: 같은 출발 자세에서 변경 전후의 복귀 시간과 어깨 추종 오차 RMS를 비교합니다.</li>
+    <li><b>압력 센서 추가</b>: 흡착 라인에 진공 센서를 달아 사진 판정을 대체하고, 흡착 실패를 들기 전에 감지합니다.</li>
+    <li><b>통신 단절 시 안전 동작</b>: ESP32 펌웨어에 heartbeat를 넣어 통신이 끊기면 정해진 동작을 하게 합니다.</li>
+    <li><b>외부 기준 정확도 측정</b>: 격자 판 위에서 흡착컵 끝 위치를 직접 재어 FK·카메라 기반 지표를 검증합니다.</li>
+    <li><b>인식 강건화</b>: 색 규칙 대신 소량 데이터로 학습한 분류기를 쓰고, 조명 변화 시험 세트를 만듭니다.</li>
+    <li><b>정지 제어와 이동 제어 분리</b>: 이동 중 게인과 도착 후 보상 hold의 기준을 하나로 정리해, 정지 인계 실패를 줄입니다.</li>
+  </ol>
+</section>
+
+<!-- ============ 부록 ============ -->
+<section class="page">
+  <h2><span class="num">부록</span>역할 · 실행 방법</h2>
+  <h3>담당 역할</h3>
+  <table>
+    <tr><th style="width:26%">영역</th><th>내용</th></tr>
+    <tr><td>시스템 설계</td><td>장치 구성, 프로세스 분리(계획·실행·복귀), 안전 원칙과 실패 시 처리 방식 결정</td></tr>
+    <tr><td>하드웨어</td><td>로봇·흡착부 조립, 손목 카메라 장착, ESP32 교체와 펌프 펌웨어, 배선</td></tr>
+    <tr><td>측정·보정</td><td>물체·트레이·흡착컵 치수 실측, 카메라 재보정 점 배치·촬영, 관절 영점·HOME 등록</td></tr>
+    <tr><td>소프트웨어</td><td>인식, 좌표 변환, 역기구학, 모션·놓기 계획, 메뉴</td></tr>
+    <tr><td>시험·분석</td><td>실물 시험 운영과 성공·실패 판정, 실행 기록 분석으로 원인 확인</td></tr>
+  </table>
+  <p class="note">구현에는 AI 코딩 도구(Codex, Claude Code)를 활용했습니다. 요구사항과 설계 결정, 실물 시험과 결과 판정은 직접 수행했습니다.</p>
+
+  <h3>실행 방법</h3>
+  <table>
+    <tr><th style="width:46%">명령</th><th>설명</th></tr>
+    <tr><td><code>python scripts/sort_menu.py</code></td><td>번호 메뉴(물체 넣기, HOME 복귀, 빈 트레이 저장, 종료). 로봇이 움직이는 항목은 한 번 더 확인</td></tr>
+    <tr><td><code>python scripts/plan_sort.py --command "빨간 상자 3번 칸에 넣어줘"</code></td><td>카메라만 읽고 작업 파일과 실행 명령을 출력</td></tr>
+    <tr><td><code>python scripts/run_sort.py --execute --supported --object red_cube</code></td><td>계획 → 집기 → 놓기 → HOME. 흡착 실패면 다시 시도</td></tr>
+    <tr><td><code>python scripts/save_tray_frame.py</code></td><td>빈 트레이 위치 저장(칸이 가려질 때 사용)</td></tr>
+    <tr><td><code>python scripts/return_home.py</code></td><td>현재 자세에서 HOME 복귀</td></tr>
+  </table>
+  <h3>코드 구성 <span style="font-weight:400;font-size:9pt;color:var(--sub)">— Python 약 7,700줄 · Ubuntu 24.04, Python 3.12, OpenCV 4.13, NumPy, OpenNI2</span></h3>
+  <table>
+    <tr><th style="width:22%">폴더</th><th>역할</th><th class="r" style="width:12%">파일</th></tr>
+    <tr><td>camera/</td><td>Astra 촬영, 카메라 보정, 손목 영상·접촉 관찰</td><td class="r">5</td></tr>
+    <tr><td>perception/</td><td>물체 분류, 집기 목표, 위치 보정</td><td class="r">4</td></tr>
+    <tr><td>tray/</td><td>트레이 검출, 칸 번호, 저장 프레임 정합</td><td class="r">4</td></tr>
+    <tr><td>robot/</td><td>좌표계, 4축 기구학, 도달 검사</td><td class="r">3</td></tr>
+    <tr><td>hardware/</td><td>서보 통신·제어, 관절 매핑, 궤적 검증, 진공 펌프</td><td class="r">5</td></tr>
+    <tr><td>motion/</td><td>접근·HOME 복귀, 정지·집힘 확인, 게인</td><td class="r">8</td></tr>
+    <tr><td>sorting/</td><td>작업 실행, 운반·놓기 계획, 후속 복귀</td><td class="r">7</td></tr>
+    <tr><td>scripts/</td><td>메뉴, 계획, 실행, 복귀, 보정 도구</td><td class="r">10</td></tr>
+  </table>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-01T15:48:21.355409",
+  "measurement_source": "user: 11cm 정도 돼",
+  "wrist_axis_to_contact_center_m": 0.11,
+  "approximate": true,
+  "applied_to": "/home/song/ros2_vacuum_pick_place/urdf/vacuum_arm.urdf",
+  "assumption": "contact center lies along wrist_link +X as in original model; transverse offsets unmeasured",
+  "tcp_link": "tip_link",
+  "physical_pick_accuracy_verified": false,
+  "runtime_configuration_changed": false,
+  "source_urdf": "/home/song/so101_vacuum_act_demo/vacuum_arm.urdf",
+  "source_sha256": "8bc848aa7e0795e98c6b866cd3902a8af54cc3a0a6ddb8bb73891ba3c35333f7"
+}

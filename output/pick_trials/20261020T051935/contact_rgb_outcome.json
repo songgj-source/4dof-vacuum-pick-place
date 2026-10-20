@@ -1,0 +1,15 @@
+{
+  "suction_command_recorded": true,
+  "suction_controller_acknowledged": true,
+  "pressure_verified": false,
+  "vacuum_pressure_kpa": null,
+  "lift_motion_complete": true,
+  "candidate_lift_m": 0.018330467725276273,
+  "motion_cycle_complete": true,
+  "actual_contact_observed": null,
+  "actual_lift_observed": null,
+  "physical_pick_success": null,
+  "annotation_source": null,
+  "run_error": null,
+  "note": "command receipt and candidate FK lift do not prove contact,vacuum pressure or actual pickup"
+}

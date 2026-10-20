@@ -1,0 +1,319 @@
+{
+  "home_return_complete": true,
+  "physical_pick_success": null,
+  "normal_execution_enabled": false,
+  "candidate_applied_permanently": false,
+  "phases": [
+    {
+      "phase": "home",
+      "error": "hover endpoint not reached",
+      "hold_confirmed": true,
+      "observed": {
+        "timestamp": 21015.199260497,
+        "joints": {
+          "base": {
+            "id": 1,
+            "model": 777,
+            "min_limit": 765,
+            "max_limit": 3329,
+            "homing": 83,
+            "mode": 0,
+            "torque": 1,
+            "goal": 2114,
+            "position": 2114,
+            "status": 0
+          },
+          "shoulder": {
+            "id": 2,
+            "model": 777,
+            "min_limit": 0,
+            "max_limit": 4091,
+            "homing": 2,
+            "mode": 0,
+            "torque": 1,
+            "goal": 1825,
+            "position": 1825,
+            "status": 0
+          },
+          "elbow": {
+            "id": 3,
+            "model": 777,
+            "min_limit": 867,
+            "max_limit": 3099,
+            "homing": 2775,
+            "mode": 0,
+            "torque": 1,
+            "goal": 3015,
+            "position": 3015,
+            "status": 0
+          },
+          "wrist_flex": {
+            "id": 4,
+            "model": 777,
+            "min_limit": 1321,
+            "max_limit": 3207,
+            "homing": 2153,
+            "mode": 0,
+            "torque": 1,
+            "goal": 3076,
+            "position": 3076,
+            "status": 0
+          }
+        },
+        "read_retry_count": 0,
+        "read_retry_events": []
+      },
+      "candidate_xyz": [
+        0.07783650341710893,
+        -0.001194090670224468,
+        0.11134205716475919
+      ]
+    }
+  ],
+  "pre_gain_stationary_snapshot": {
+    "timestamp": 21005.949165839,
+    "joints": {
+      "base": {
+        "id": 1,
+        "model": 777,
+        "min_limit": 765,
+        "max_limit": 3329,
+        "homing": 83,
+        "mode": 0,
+        "torque": 1,
+        "goal": 2491,
+        "position": 2491,
+        "status": 0
+      },
+      "shoulder": {
+        "id": 2,
+        "model": 777,
+        "min_limit": 0,
+        "max_limit": 4091,
+        "homing": 2,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3532,
+        "position": 3536,
+        "status": 0
+      },
+      "elbow": {
+        "id": 3,
+        "model": 777,
+        "min_limit": 867,
+        "max_limit": 3099,
+        "homing": 2775,
+        "mode": 0,
+        "torque": 1,
+        "goal": 1527,
+        "position": 1527,
+        "status": 0
+      },
+      "wrist_flex": {
+        "id": 4,
+        "model": 777,
+        "min_limit": 1321,
+        "max_limit": 3207,
+        "homing": 2153,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3125,
+        "position": 3125,
+        "status": 0
+      }
+    },
+    "read_retry_count": 0,
+    "read_retry_events": []
+  },
+  "pitch_p_used": 48,
+  "start_snapshot": {
+    "timestamp": 21007.515763415,
+    "joints": {
+      "base": {
+        "id": 1,
+        "model": 777,
+        "min_limit": 765,
+        "max_limit": 3329,
+        "homing": 83,
+        "mode": 0,
+        "torque": 1,
+        "goal": 2491,
+        "position": 2491,
+        "status": 0
+      },
+      "shoulder": {
+        "id": 2,
+        "model": 777,
+        "min_limit": 0,
+        "max_limit": 4091,
+        "homing": 2,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3536,
+        "position": 3536,
+        "status": 0
+      },
+      "elbow": {
+        "id": 3,
+        "model": 777,
+        "min_limit": 867,
+        "max_limit": 3099,
+        "homing": 2775,
+        "mode": 0,
+        "torque": 1,
+        "goal": 1527,
+        "position": 1527,
+        "status": 0
+      },
+      "wrist_flex": {
+        "id": 4,
+        "model": 777,
+        "min_limit": 1321,
+        "max_limit": 3207,
+        "homing": 2153,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3125,
+        "position": 3125,
+        "status": 0
+      }
+    },
+    "read_retry_count": 0,
+    "read_retry_events": []
+  },
+  "start_candidate_xyz": [
+    0.21287076834431037,
+    -0.1436570630016697,
+    0.10741741952477825
+  ],
+  "travel_rate_pulse_s": 300.0,
+  "home_travel_profile": {
+    "pulses_per_step": 4,
+    "fast_travel": true,
+    "tick_s": 0.013333333333333334,
+    "tracking_limit": 32,
+    "smooth_motion": true,
+    "native": false,
+    "batch_slow_joints": false
+  },
+  "continuous_home_return": true,
+  "pitch_p_home": 48,
+  "home_requested_raw": {
+    "base": 2110,
+    "shoulder": 1823,
+    "elbow": 3018,
+    "wrist_flex": 3075
+  },
+  "home_actual_snapshot": {
+    "timestamp": 21015.345737034,
+    "joints": {
+      "base": {
+        "id": 1,
+        "model": 777,
+        "min_limit": 765,
+        "max_limit": 3329,
+        "homing": 83,
+        "mode": 0,
+        "torque": 1,
+        "goal": 2114,
+        "position": 2114,
+        "status": 0
+      },
+      "shoulder": {
+        "id": 2,
+        "model": 777,
+        "min_limit": 0,
+        "max_limit": 4091,
+        "homing": 2,
+        "mode": 0,
+        "torque": 1,
+        "goal": 1825,
+        "position": 1825,
+        "status": 0
+      },
+      "elbow": {
+        "id": 3,
+        "model": 777,
+        "min_limit": 867,
+        "max_limit": 3099,
+        "homing": 2775,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3015,
+        "position": 3015,
+        "status": 0
+      },
+      "wrist_flex": {
+        "id": 4,
+        "model": 777,
+        "min_limit": 1321,
+        "max_limit": 3207,
+        "homing": 2153,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3076,
+        "position": 3076,
+        "status": 0
+      }
+    },
+    "read_retry_count": 0,
+    "read_retry_events": []
+  },
+  "final_hold_confirmed": true,
+  "restoration_verified": true,
+  "final_snapshot": {
+    "timestamp": 21016.082115491,
+    "joints": {
+      "base": {
+        "id": 1,
+        "model": 777,
+        "min_limit": 765,
+        "max_limit": 3329,
+        "homing": 83,
+        "mode": 0,
+        "torque": 1,
+        "goal": 2114,
+        "position": 2114,
+        "status": 0
+      },
+      "shoulder": {
+        "id": 2,
+        "model": 777,
+        "min_limit": 0,
+        "max_limit": 4091,
+        "homing": 2,
+        "mode": 0,
+        "torque": 1,
+        "goal": 1825,
+        "position": 1825,
+        "status": 0
+      },
+      "elbow": {
+        "id": 3,
+        "model": 777,
+        "min_limit": 867,
+        "max_limit": 3099,
+        "homing": 2775,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3015,
+        "position": 3015,
+        "status": 0
+      },
+      "wrist_flex": {
+        "id": 4,
+        "model": 777,
+        "min_limit": 1321,
+        "max_limit": 3207,
+        "homing": 2153,
+        "mode": 0,
+        "torque": 1,
+        "goal": 3076,
+        "position": 3076,
+        "status": 0
+      }
+    },
+    "read_retry_count": 0,
+    "read_retry_events": []
+  }
+}

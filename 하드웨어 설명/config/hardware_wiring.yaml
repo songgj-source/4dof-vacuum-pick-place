@@ -1,0 +1,28 @@
+# 사용자 제공 배선표 기준(2026-10-16). 문서용 명세이며 ROS 파라미터가 아닙니다.
+# 장치에 자동 적용되지 않으며 펌웨어/서보 중계를 구성하지 않습니다.
+controller: ESP32
+pump_driver: L9110S
+connections:
+  - signal: pump_direction_a
+    esp32: GPIO26
+    breadboard: j10
+    destination: L9110S A-1A
+  - signal: pump_direction_b
+    esp32: GPIO25
+    breadboard: j11
+    destination: L9110S A-1B
+  - signal: uart_rx
+    esp32: GPIO33
+    breadboard: j12
+    destination: Servo Adapter TX
+  - signal: uart_tx
+    esp32: GPIO32
+    breadboard: j13
+    destination: Servo Adapter RX
+  - signal: common_ground
+    esp32: GND
+    breadboard: j5
+    destination: negative rail
+physical_wiring_verified: false
+firmware_pin_mapping_verified: false
+servo_uart_bridge_implemented: false

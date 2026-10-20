@@ -1,0 +1,49 @@
+{
+  "verdict": "unknown",
+  "display": "판정 불가",
+  "reason": "red area 4366px outside the contact-view range",
+  "mode": "record_only",
+  "can_block_motion": false,
+  "physical_contact_confirmed": null,
+  "vacuum_seal_confirmed": null,
+  "confidence_calibrated": false,
+  "visible_gap_verified": false,
+  "scope": "red box,640x480 wrist view,historical contact reference",
+  "frame_count": 5,
+  "heuristic_version": "contact_rgb_v1",
+  "reference_path": "/home/song/ros2_vacuum_pick_place_ver2 (Copy 2)/output/ik_resume_20261012/pickup_twoaxis_p64_trial/before_suction_wrist.png",
+  "reference_sha256": "8ef19f060cf4b9b8f08017b6d85897e45275f21d526b330e4cbe4232c4ba35af",
+  "reference_status": "historical_contact_view_not_independently_validated",
+  "evidence": [
+    {
+      "image": "contact_rgb_frames/0000.png",
+      "host_capture_ns": 19466994184155,
+      "sha256": "c3242a81f9eccfdf6518ca33cfeecfed8a765adaabd24c4dc6ff7be0431bfc2b"
+    },
+    {
+      "image": "contact_rgb_frames/0001.png",
+      "host_capture_ns": 19467026715176,
+      "sha256": "7671cb1787af955f787befae686d624fe3bb0c09dbe69821df51a0d3f8fc598a"
+    },
+    {
+      "image": "contact_rgb_frames/0002.png",
+      "host_capture_ns": 19467057879010,
+      "sha256": "64654be947f40524c35ea3bc12bbca124b2f01fe320f411f511fcb77cfeb07e9"
+    },
+    {
+      "image": "contact_rgb_frames/0003.png",
+      "host_capture_ns": 19467093962904,
+      "sha256": "aa20396c6db53b939288e1b84c170c17c5385bdc60b86834337b70c74bb9d731"
+    },
+    {
+      "image": "contact_rgb_frames/0004.png",
+      "host_capture_ns": 19467126115379,
+      "sha256": "c14e4c5356f26b6a022a1023e992e9a0ac66ace4b55e1e21c1982d3a043c196f"
+    }
+  ],
+  "candidate_contact_xyz": [
+    0.23688419642444547,
+    -0.017839022721649927,
+    0.01727978099920012
+  ]
+}
