@@ -26,6 +26,9 @@ class ServoDriver:
         self.last_fault, self.hold_confirmed = None, False
         self.lock = threading.RLock()
         self.cache_lock = threading.Lock()
+        # 인계 때 목표–위치 차이 허용(펄스)과 하중 처짐 보정 한도. 기본값이 집기 동작의 안전 기준이다.
+        # HOME 복귀(return_home.py)만 2026-10-21 사용자 지시로 둘 다 풀어 쓴다(멈춰 있으면 처짐 크기와 상관없이 인계).
+        self.max_pending_pulses, self.max_load_offset = 8, 6
         self.feedback_cache = None
         self.hold_results, self.hold_error = {}, None
         self.hold_targets = {}
@@ -263,7 +266,7 @@ class ServoDriver:
                         tail = reads[-10:]                      # 약 0.5초 동안 위치·목표가 전혀 안 변한 경우만(움직이는 중이면 보정하지 않는다)
                         if len(tail) == 10 and len(set(tail)) == 1:
                             offset = tail[0][0] - tail[0][1]
-                            if 2 < abs(offset) <= 6:
+                            if 2 < abs(offset) <= self.max_load_offset:
                                 current[name] = offset
                                 if seen.get(name) == offset:
                                     offsets[name] = offsets.get(name, 0) + offset
@@ -297,7 +300,7 @@ class ServoDriver:
             for joint in self.profile.joints:
                 name = joint.name
                 row = second['joints'][name]
-                if (type(row['goal']) is not int or abs(row['goal']-row['position'])>8
+                if (type(row['goal']) is not int or abs(row['goal']-row['position'])>self.max_pending_pulses
                         or not joint.raw_min+16 <= row['position'] <= joint.raw_max-16):
                     raise ValueError('unsafe pending goal or endpoint; existing torque takeover refused')
             if keep_goal:
@@ -315,7 +318,7 @@ class ServoDriver:
                 previous = samples[0]
                 offsets = {n:first['joints'][n]['position']-goals[n] for n in self.names}
                 if load_offset:
-                    offsets = {n:(o if 2 < abs(o) <= 6 else 0) for n,o in offsets.items()}
+                    offsets = {n:(o if 2 < abs(o) <= self.max_load_offset else 0) for n,o in offsets.items()}
                 else:
                     offsets = dict.fromkeys(self.names,0)
                 for sample in samples:

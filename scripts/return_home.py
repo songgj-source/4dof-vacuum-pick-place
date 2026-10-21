@@ -55,14 +55,18 @@ stopfile=OUT/'stop'
 def stopped():return cancelled[0] or stopfile.exists()
 def tcp(snapshot):
     return g.forward([-(snapshot['joints'][n]['position']-zeros[n])*2*math.pi/4096 for n in driver.names])
+def home_driver(bus,profile):
+    """HOME 복귀용: 뻗은 자세에서 어깨가 무게로 10펄스 넘게 처져도(10-21 실물 3719/3709) 멈춰 있으면 인계·보정한다."""
+    d=ServoDriver(bus,profile);d.max_pending_pulses=d.max_load_offset=math.inf;return d
 with ServoTransport(profile) as bus:
     try:
         if args.record_astra:recorder=AstraRecorder(OUT)
-        driver=ServoDriver(bus,profile)
+        driver=home_driver(bus,profile)
         first=driver._snapshot(torque=1);driver.sleep(.05);second=driver._snapshot(torque=1)
         for joint in profile.joints:
             n=joint.name;a=first['joints'][n];b=second['joints'][n]
-            if abs(a['position']-b['position'])>1 or a['goal']!=b['goal'] or abs(b['goal']-b['position'])>8 or not joint.raw_min+16<=b['position']<=joint.raw_max-16:
+            # 2026-10-21 사용자: HOME 복귀는 목표–위치 차이(하중 처짐) 검사를 뺀다. 움직이는 중인지·관절 한계 근처인지는 그대로 본다.
+            if abs(a['position']-b['position'])>1 or a['goal']!=b['goal'] or not joint.raw_min+16<=b['position']<=joint.raw_max-16:
                 raise ValueError('pose is not stationary before temporary gains')
         result['pre_gain_stationary_snapshot']=second
         pitch_p=choose_pitch_p(second['joints']['shoulder']['position'],args.pitch_p);result['pitch_p_used']=pitch_p
@@ -105,7 +109,7 @@ with ServoTransport(profile) as bus:
                         if grade=='far':raise ValueError(f'HOME exceeds the recorded-pose tolerance by {deviation} pulses')
                         if grade=='near':result['home_deviation_pulses']=deviation   # 8 넘게 어긋나도 다음 사이클 시작 허용선(32) 안에서 멈췄으면 성공으로 기록
                     result['phases'][-1].update(observed=observed,candidate_xyz=xyz)
-                driver=ServoDriver(bus,profile);driver.hold_existing_torque(supported=True,keep_goal=True,load_offset=True,settle_s=.3,takeover_attempts=4)  # 보상한 목표를 현재 위치로 덮어쓰지 않는다
+                driver=home_driver(bus,profile);driver.hold_existing_torque(supported=True,keep_goal=True,load_offset=True,settle_s=.3,takeover_attempts=4)  # 보상한 목표를 현재 위치로 덮어쓰지 않는다
             for index in range(0 if folded else 3):
                 current=driver._snapshot(torque=1);xyz=tcp(current)[:3]
                 if xyz[2]>=.080:break

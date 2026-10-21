@@ -22,7 +22,7 @@ VERTICAL = -math.pi / 2          # 공구가 수직 아래를 향한 pitch
 DEFAULT_MAX_TILT_DEG = 50.       # 2026-10-20 사용자: 1번 칸이 45°로 3mm 모자라 50°로(이전 45). place 때 공구를 앞으로 기울여도 되는 한도(사용자 허용). 0이면 수직만. 필요한 가장 작은 기울기만 쓴다
 TILT_STEP_DEG = 5.
 MAX_TILT_DEG = 50.
-SLOT_RADIUS_MAX_M = .36          # 기울이기를 허용하면 칸 반경은 이 한도까지 도달 가능성을 따져 본다(수직만이면 ENVELOPE_M[1])
+SLOT_RADIUS_MAX_M = .38          # 기울이기를 허용하면 칸 반경은 이 한도까지 도달 가능성을 따져 본다(수직만이면 ENVELOPE_M[1])
 CARRY_MARGIN_M = .010           # 운반 높이는 벽을 넘는 최소 높이(floor)보다 이만큼만 높게 시작한다(더 높으면 내리고 올리는 시간만 늘어난다)
 TILT_MIN_Z = .070                # 기울이는 자리의 최소 높이(이동 코드의 낮은 호버 한계)
 
@@ -180,6 +180,7 @@ def plan_place(model, slot, start_xyz, *, carry_z=CARRY_Z, min_carry_z=None, hel
     held = float(held_height_mm) if held_height_mm is not None else (40. if obstacles else None)
     checked = [o.get('label', 'object') for o in obstacles]
     slot_xy, start_xy = (sx, sy), start[:2]
+    target_radius = radius
 
     def result(legs, z, pull_mm, tilt_deg=0.):
         out = []
@@ -191,7 +192,8 @@ def plan_place(model, slot, start_xyz, *, carry_z=CARRY_Z, min_carry_z=None, hel
                 leg.update(item[3])
             out.append(leg)
         return dict(legs=out, start=start, release_after='lower', carry_z=round(z, 4), tilt_deg=float(tilt_deg),
-                    slot_radius_m=radius, pull_in_mm=round(pull_mm, 1), obstacles_checked=checked,
+                    slot_radius_m=radius, target_radius_m=target_radius, object_outward_mm=round((target_radius - radius) * 1000., 1),
+                    pull_in_mm=round(pull_mm, 1), obstacles_checked=checked,
                     assumed_footprint_radius_mm=FOOTPRINT_RADIUS_M * 1000, held_radius_mm=float(held_radius_mm), executed=False, usable_for_motion=False)
 
     # 1) 곧바로 올라가는 계획: 벽을 넘는 가장 낮은 이동 높이부터(낮을수록 내리고 올리는 시간이 짧다)
@@ -210,11 +212,19 @@ def plan_place(model, slot, start_xyz, *, carry_z=CARRY_Z, min_carry_z=None, hel
         raise blocked
 
     # 2) 공구를 앞으로 기울여 곧바로 올라가는 계획: 가장 작은 기울기부터(수직은 이미 위에서 시도했다)
+    # 기울이면 컵 아래 매달린 물체 바닥이 컵보다 (물체 높이 × sin 기울기)만큼 바깥에 놓인다(흰 상자 24mm·50도: 18mm).
+    # 칸 목표는 물체가 놓일 자리이므로 컵은 그만큼 안쪽으로 보낸다. 그래서 컵이 팔 한계에 있어도 물체는 더 멀리 놓인다
+    # (2026-10-21 사용자 확인: 50도에서 실제로 약 2cm 더 멀리 놓임. 예전 1번 칸 고정 -20mm 보정을 대신한다).
+    target_xy, target_radius = (sx, sy), radius
     z_clear = max(start[2], TILT_MIN_Z)
     if reachable(model, (*start_xy, z_clear), start_pitch):
         tilt = max(TILT_STEP_DEG, start_tilt_deg)
         while tilt <= max_tilt_deg + 1e-9:
             pitch = VERTICAL + math.radians(tilt)
+            shift = (float(held_height_mm) if held_height_mm is not None else 0.) / 1000. * math.sin(math.radians(tilt))
+            radius = target_radius - shift
+            sx, sy = target_xy[0] * radius / target_radius, target_xy[1] * radius / target_radius
+            slot_xy = (sx, sy)
             blocked = None
             for z in _carry_heights(floor, carry_z, z_clear, rim_z=min_carry_z or 0.):
                 points = [(*start_xy, z_clear), (*start_xy, z), (sx, sy, z), (sx, sy, drop)]
@@ -259,6 +269,7 @@ def plan_place(model, slot, start_xyz, *, carry_z=CARRY_Z, min_carry_z=None, hel
             if blocked is not None:
                 raise blocked
             tilt += TILT_STEP_DEG
+    (sx, sy), slot_xy, radius = target_xy, target_xy, target_radius
 
     # 3) 끌어당긴 뒤 올리는 계획: 필요한 최소 높이(5mm 단위 위로 올림)에서 가장 짧게 끌어당긴다
     steps = math.ceil(floor / CARRY_STEP_M - 1e-9)

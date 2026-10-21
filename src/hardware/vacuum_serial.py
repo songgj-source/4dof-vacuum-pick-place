@@ -21,12 +21,29 @@ class SerialVacuum:
         import serial
         self.serial=open_exclusive_serial(serial,self.device,115200)
         try:
-            time.sleep(2.)
+            self._wait_ready()
             self.stop()
         except BaseException:
             self.serial.close();self.serial=None
             raise
         return self
+
+    def _wait_ready(self,timeout_s=2.5):
+        """포트를 열면 ESP32가 재부팅된다. 예전에는 무조건 2초를 기다렸다. 이제 식별 명령(q)에 답이 오면 바로 넘어간다
+        (펌웨어 setup에는 지연이 없다). 답이 없으면 예전처럼 시간을 채우고 넘어간다(응답 확인은 원래 하지 않았다)."""
+        deadline=time.monotonic()+timeout_s;reply=bytearray();next_query=0.
+        while time.monotonic()<deadline:
+            if time.monotonic()>=next_query:
+                self._send(b'q');next_query=time.monotonic()+.1
+            count=self.serial.in_waiting
+            if count:
+                reply.extend(self.serial.read(min(count,4096)))
+                if b'ESP32_VACUUM' in reply:
+                    self.serial.reset_input_buffer()
+                    return True
+                del reply[:-64]
+            time.sleep(.01)
+        return False
 
     def _send(self,command):
         if self.serial is None:raise RuntimeError('pump is not open')

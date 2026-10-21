@@ -81,6 +81,7 @@ def main(argv=None):
         extra = [bgr] * 5
     else:
         bgr, depth, extra = live_frames()
+        _LAST_FRAMES[:] = [bgr, depth]
         if not args.tray_frame:
             # 깊이 벽 검출은 프레임마다 흔들린다(칸 안 물체가 있으면 특히). 트레이를 못 찾으면 새 프레임으로 다시 찍는다.
             # 2026-10-20: 같은 장면에서 3번 중 1번만 실패하는 것을 확인(손·그림자 등) → 재시도를 2회에서 5회로(프레임당 약 4초).
@@ -88,6 +89,7 @@ def main(argv=None):
                 if detect_tray(bgr, depth, ROOT, first_end=args.tray_numbering, extra_bgr=extra).get('found'):
                     break
                 bgr, depth, extra = live_frames()
+                _LAST_FRAMES[:] = [bgr, depth]
     tray_source, tray_offset = 'live camera', None
     stored_tray_ok = bool(args.tray_frame)
     fresh_tray = None
@@ -96,11 +98,21 @@ def main(argv=None):
         import numpy as np
         from tray.tray_frame_check import tray_offset_px, register_tray, move_slots
         stored_bgr, stored_depth = cv2.imread(args.tray_frame[0]), np.load(args.tray_frame[1])
-        check = tray_offset_px(stored_bgr, bgr, depth=stored_depth, root=ROOT)     # 모서리는 저장 프레임 깊이에서 구한다(트레이가 어디에 있어도)
-        registration = None
-        if not check['ok']:
+        # 2026-10-21: 같은 장면에서 대조가 한 번은 실패(메뉴 4번, 흰 상자를 넣은 직후)하고 다시 하면 성공했다(7 px, 2.2°, 잔차 1.4 px).
+        # 카메라로 찍는 경우에는 실패하면 새로 찍어 최대 3번 대조한다. 저장 파일(--from-files)은 같은 사진이라 다시 하지 않는다.
+        tries = 1 if args.from_files else 3
+        for attempt in range(tries):
+            check = tray_offset_px(stored_bgr, bgr, depth=stored_depth, root=ROOT)     # 모서리는 저장 프레임 깊이에서 구한다(트레이가 어디에 있어도)
+            registration = None
+            if check['ok']:
+                break
             # 조금 밀렸거나 돌았으면 밀린 만큼을 측정해서 저장해 둔 칸 위치를 옮겨 쓴다(모서리 2곳 이상이 정확히 맞아야 한다). 크게 움직였으면 거부한다.
             registration = register_tray(stored_bgr, bgr, depth=stored_depth, root=ROOT)
+            if registration['ok'] or attempt + 1 == tries:
+                break
+            bgr, depth, extra = live_frames()
+            _LAST_FRAMES[:] = [bgr, depth]
+        if not check['ok']:
             if not registration['ok'] and args.tray_fallback_live:
                 # 트레이가 저장한 위치에서 크게 움직였다: 지금 카메라로 트레이를 다시 찍는다(새 프레임으로 최대 5번). 물체 쪽 프레임은 그대로 쓴다.
                 stored_tray_ok, registration = False, None
@@ -168,7 +180,9 @@ def main(argv=None):
                 planned_at=datetime.now(timezone.utc).isoformat())
     except ValueError as exc:
         parser.error(str(exc))
-    if (not args.tray_frame and not args.from_files) or not stored_tray_ok:     # 저장한 트레이가 안 맞아 다시 찾았으면 새 기준으로 저장
+    # 카메라로 찍었으면 저장 프레임을 썼더라도 트레이가 비어 있을 때(칸 바닥 3개) 새 기준으로 저장한다. 10-21: 기준이 10:46 것으로 남아
+    # 그사이 트레이가 20~30px 밀린 것을 따라가지 못했다(1번 칸에 물체가 들어간 뒤라 다시 찾기도 실패). 저장 파일 입력은 다시 찾았을 때만.
+    if not args.from_files or not stored_tray_ok:
         # 2026-10-20: 카메라로 트레이를 직접 찾았고 칸 바닥 3개가 모두 보이면(=비어 있음) 이 프레임을 빈 트레이 기준으로 자동 저장한다.
         # 물체가 들어간 다음 계획에서 --tray-frame으로 칸 위치를 알 수 있다(메뉴 9번을 따로 누르지 않아도 된다). 실패해도 계획에는 영향 없음.
         try:
@@ -204,5 +218,28 @@ def main(argv=None):
     return 0
 
 
+_LAST_FRAMES = []      # 카메라로 찍은 마지막 사진(계획이 실패하면 원인 확인용으로 남긴다)
+
+
+def save_failed_frames():
+    """계획 실패 시 그때 사진을 output/place_jobs/<시각>_failed/에 남긴다(성공하면 계획 폴더에 이미 남는다)."""
+    if len(_LAST_FRAMES) != 2:
+        return
+    try:
+        import cv2
+        import numpy as np
+        out = ROOT / 'output/place_jobs' / (datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '_failed')
+        out.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(out / 'frame_rgb.png'), _LAST_FRAMES[0])
+        np.save(out / 'frame_depth_mm.npy', _LAST_FRAMES[1])
+    except Exception:
+        pass
+
+
 if __name__ == '__main__':
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit as exc:
+        if exc.code not in (0, None):
+            save_failed_frames()
+        raise

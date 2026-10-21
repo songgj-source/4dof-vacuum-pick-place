@@ -9,6 +9,8 @@
 center_px는 깊이 덩어리 중심이라 색 영상에서 보이는 위치보다 약 15~20px 오른쪽으로
 치우쳐 나온다(깊이-색 정합 오차 후보). 집기 위치로 쓰기 전에 보정이 필요하다.
 """
+import hashlib
+
 import cv2
 import numpy as np
 
@@ -96,11 +98,23 @@ def table_height_mm(depth, intrinsics=None):
     """
     intrinsics = intrinsics or DEFAULT_INTRINSICS
     depth = np.asarray(depth)
+    # 계획 한 번에 같은 깊이 영상으로 5번 불린다(물체·트레이·칸 검사, 0.1초씩). 평면 맞춤은 시드가 고정돼 결과가 같으므로
+    # 내용이 같은 영상이면 저장해 둔 결과의 복사본을 돌려준다(호출한 쪽이 고쳐 써도 저장본은 그대로).
+    key = (hashlib.sha1(np.ascontiguousarray(depth).view(np.uint8)).hexdigest(), depth.shape, depth.dtype.str,
+           tuple(sorted(intrinsics.items())))
+    if key in _HEIGHT_CACHE:
+        return _HEIGHT_CACHE[key].copy()
     valid, points = _camera_points_mm(depth, intrinsics)
     center, normal = _fit_plane(points)
     height = np.zeros(depth.shape, np.float64)
     height[valid] = (points - center) @ normal
-    return height
+    if len(_HEIGHT_CACHE) >= 4:
+        _HEIGHT_CACHE.pop(next(iter(_HEIGHT_CACHE)))
+    _HEIGHT_CACHE[key] = height
+    return height.copy()
+
+
+_HEIGHT_CACHE = {}
 
 
 def _color_masks(bgr):

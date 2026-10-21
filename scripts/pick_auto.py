@@ -34,6 +34,7 @@ from optional.wrist_centering.wrist_hover_center import run_center_once
 from camera.wrist_contact_rgb import record_observation,outcome_context,camera_worker,unknown as unknown_contact_rgb
 
 BASE=ROOT/'output/ik_resume_20261012'
+SLOW_RATE_PPS=100.   # 천천히 움직이는 동작의 속도(펄스/초), 2026-10-21 사용자 지정(이전: 하강 60, 접촉 직전 13, 탐색 이동 약 17)
 PUMP='/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0'
 
 
@@ -80,7 +81,7 @@ def main(argv=None):
     parser.add_argument('--home-rate',type=float,default=150.,help='place only: automatic HOME return speed in pulses/s, 50-300 (default 150, the speed that passes the return_home.py 16-pulse follow-error guard: at 200 and 300 the shoulder lags 17 and the guard stops the return (measured 2026-10-15))')
     parser.add_argument('--held-rate',type=float,default=100.,help='pulses/s while the object hangs on the cup: lift20, lifts/lowers in place and the table return, 0 = old slow profile (26-33), else 40-150 (default 100, 2026-10-20 user: slower shook more)')
     parser.add_argument('--approach-feedforward-mm',type=float,nargs=2,default=[3.5,3.0],metavar=('RADIAL','UP'),help='send the approach/approach_b hover this far outward and up (P32 stops short the same way: 2026-10-20, 15 runs); 0 0 disables, each 0-6 mm')
-    parser.add_argument('--descent-rate',type=float,default=60.,help='pulses/s while lowering from above (pick descent; place lower uses --held-rate), 13-100 (default 60 since 2026-10-20, was 33). The last 20 pulses before contact stay at 13 pulses/s; lifting off the table is unchanged')
+    parser.add_argument('--descent-rate',type=float,default=100.,help='pulses/s while lowering from above (pick descent; place lower uses --held-rate), 13-100 (default 60 since 2026-10-20, was 33). The last 20 pulses before contact stay at 13 pulses/s; lifting off the table is unchanged')
     parser.add_argument('--place-pulses-per-step',type=int,choices=[2,4],default=2,help='place carry: pulses per tick (tick = pulses/--place-rate). Past records show the arm shakes unless the tick is about 13.4 ms; 2 pulses at 150 pulses/s gives that tick at a lower speed than 4 at 300')
     parser.add_argument('--hold-check',choices=['enforce','record','off'],default='off',help='(default off since 2026-10-19: the colour-based check misjudged a white box on the white table as "nothing under the cup" although it was lifted; user asked to remove the verdict) place only: after lifting 20 mm compare the wrist photo with the contact photo; enforce = if the object clearly did not come up with the cup, release the suction, skip place, return HOME and exit with code 3 (run_sort.py then picks again). record = only log; off = no check')
     parser.add_argument('--min-contact-z-mm',type=float,default=10.,help='lowest cup height for contact/lift moves, 5-30 mm (default 10). The old 30 mm floor was removed on user instruction so low objects (white box top 24 mm) can be picked; this minimum only keeps the cup off the table')
@@ -371,6 +372,16 @@ def main(argv=None):
                         kwargs.update(quick_ticks=True,pulses_per_step=2,tick_s=2./args.held_rate,tracking_limit=max(kwargs.get('tracking_limit',16),32))
                         if name.startswith('place'):kwargs.pop('tail',None)
                         elif name.startswith('return'):kwargs['tail']=(14,13.)
+                    if not kwargs.get('fast_travel'):
+                        # 2026-10-21 사용자: 천천히 움직이는 동작(하강·칸 안 내리기·책상에 내려놓기·탐색/재정렬 이동)은 모두 100펄스/초.
+                        # 접촉 직전 13펄스/초 끝 구간도 없앤다. 빨라진 만큼 추종 오차 가드는 흡착한 채 이동과 같은 32펄스로 둔다.
+                        kwargs.pop('tail',None)
+                        pps=kwargs.get('pulses_per_step',1)
+                        if not kwargs.get('quick_ticks') or pps/kwargs.get('tick_s',1.)<SLOW_RATE_PPS:
+                            # 틱당 2펄스·20ms(흡착한 채 이동과 같은 틱). 낮은 상자 위 호버만 1펄스 규칙(hover_trial)이 있어 1펄스·10ms.
+                            if pps==1 and not (kwargs.get('box_top_m') is not None and target[2]<.080):pps=2
+                            kwargs.update(quick_ticks=True,pulses_per_step=pps,tick_s=pps/SLOW_RATE_PPS)
+                        kwargs['tracking_limit']=max(kwargs.get('tracking_limit',16),32)
                     def move(record,goal,**extra):
                         return run_hover_trial(driver,geometry,zeros,goal,math.hypot(*goal[:2]),supported=True,record=record,cancelled=is_cancelled,batch_slow_joints=args.batch_base,smooth_motion=True,**{**kwargs,**extra})
                     try:
