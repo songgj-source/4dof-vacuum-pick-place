@@ -56,5 +56,14 @@ class UnknownPipelineTest(unittest.TestCase):
             self.assertEqual(result['plan']['place']['object_geometry']['height_mm'], 35.)
 
 
+class UnknownCommandTests(unittest.TestCase):
+    def test_unknown_command_retakes_the_tray_when_it_moved(self):
+        import sort_menu
+        with patch.object(sort_menu.Path, 'exists', return_value=True):
+            command = sort_menu.unknown_command(3)
+        self.assertIn('--tray-fallback-live', command)
+        self.assertIn('--tray-frame', command)
+
+
 if __name__ == '__main__':
     unittest.main()

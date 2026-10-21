@@ -78,30 +78,10 @@ python scripts/run_sort.py --execute --supported --object red_cube  # 실제 구
 
 `--execute --supported` 없이 실행하면 로봇을 움직이지 않고 계획만 출력합니다. 개발 환경은 conda `lerobot_312`(Python 3.12)입니다.
 
-## HTTP API (다른 코드에서 로봇팔 호출)
-
-```bash
-python scripts/arm_api.py                                # 이 장비에서만 접근 (127.0.0.1:8000)
-python scripts/arm_api.py --host 0.0.0.0 --token 비밀값   # 다른 장비에서 접근 (토큰 필수)
-```
-
-| 요청 | 설명 |
-|---|---|
-| `POST /pick_place` `{"object": "red_cube", "slot": 2}` | 집어서 칸에 넣고 HOME 복귀. object: `white_box`(1번 칸) · `red_cube`(2) · `tape_measure`(3) · `unknown`(새 물체). `slot` 생략 시 기본 칸. 바로 `202 {"task_id"}` 반환 |
-| `POST /return_home` | HOME 복귀 |
-| `POST /stop` | 실행 중인 작업 즉시 중단(팔은 그 자리에 멈춤. 이후 `return_home` 필요) |
-| `GET /status` | `state`(`idle`/`busy`), `phase_label`(지금 단계, 음성 안내용), `arm_home`(`true`/`null`=모름) |
-| `GET /tasks/<id>` | 결과 `{"ok", "reason", "reason_code", "seconds", "warnings"}`와 단계 기록 |
-
-- 한 번에 한 작업만 받습니다. 실행 중에 다른 명령이 오면 `409 busy`입니다.
-- 실패는 문장과 함께 고정 코드로 나옵니다: `object_not_found` · `slot_too_small` · `unreachable` · `tray_not_found` · `tray_moved` · `torque_off` · `device_absent` · `cancelled` · `busy` · `failed` 등.
-- 서보 토크가 꺼졌거나 팔 상태를 읽지 못하면 움직이지 않고 `torque_off`/`arm_state_unknown`으로 거절합니다. 팔을 받치고 토크를 켜는 일은 사람이 해야 합니다.
-- `unknown`은 시작 후 `phase_label`이 "기준 저장 완료: 새 물체 하나를 놓고…"일 때 물체를 놓습니다(90초 대기).
-
 ## 폴더 구조
 
 ```
-scripts/      메뉴, HTTP API(arm_api.py), 계획, 집기·놓기 실행, 새 물체(unknown) 집기, HOME 복귀, 보정 도구
+scripts/      메뉴, 계획, 집기·놓기 실행, 새 물체(unknown) 집기, HOME 복귀, 보정 도구
 src/camera    Astra 촬영, 카메라 보정, 손목 영상
 src/perception 물체 분류, 집기 목표, 위치 보정
 src/tray      트레이·칸·숫자 검출

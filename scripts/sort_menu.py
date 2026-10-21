@@ -276,17 +276,10 @@ def ensure_torque():
     return False
 
 
-def run_streaming(cmd, on_event=None, on_start=None, quiet=False):
-    """명령을 실행하고 진행 단계만 한 줄씩 보여 준다. 마지막 JSON 줄(결과)을 돌려준다.
-
-    arm_api.py가 같은 실행 경로를 쓰도록 훅을 둔다(메뉴는 기본값 그대로 화면에 출력):
-    on_event('phase', (원래 이름, 한국어 문구)) / on_event('plan', (계획 dict, 경고 목록)), on_start(proc), quiet=True면 출력 안 함.
-    """
+def run_streaming(cmd):
+    """명령을 실행하고 진행 단계만 한 줄씩 보여 준다. 마지막 JSON 줄(결과)을 돌려준다."""
     started = time.monotonic()
     proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-    if on_start:
-        on_start(proc)
-    echo = (lambda *a, **k: None) if quiet else print
     last_json = None
     last_error = None
     previous_phase = None
@@ -297,14 +290,11 @@ def run_streaming(cmd, on_event=None, on_start=None, quiet=False):
             last_error = line.split('error:', 1)[1].strip()
         if line.startswith('{"phase"'):
             try:
-                raw = json.loads(line)['phase']
-                phase = phase_label(raw)
+                phase = phase_label(json.loads(line)['phase'])
                 if phase != previous_phase:
                     step += 1
-                    echo(f'   {dim(f"{step:>2}")} {cyan("›")} {phase}', flush=True)
+                    print(f'   {dim(f"{step:>2}")} {cyan("›")} {phase}', flush=True)
                     previous_phase = phase
-                    if on_event:
-                        on_event('phase', (raw, phase))
             except (ValueError, KeyError):
                 pass
         elif line.startswith('{'):
@@ -316,10 +306,10 @@ def run_streaming(cmd, on_event=None, on_start=None, quiet=False):
                 plan = last_json.get('plan', {})
                 name = next((name for label, name, _ in OBJECTS.values() if label == plan.get('label')), plan.get('label'))
                 target = [round(v) for v in plan.get('manual_target_mm', [])]
-                echo(f"   {bold('계획')} {name} {cyan('→')} {plan.get('slot_number')}번 칸  {dim(f'목표 {target} mm')}", flush=True)
+                print(f"   {bold('계획')} {name} {cyan('→')} {plan.get('slot_number')}번 칸  {dim(f'목표 {target} mm')}", flush=True)
                 slots = plan.get('tray_slots') or {}
                 if slots:
-                    echo(dim('   트레이 칸 위치(로봇 기준 거리): ') + ', '.join(
+                    print(dim('   트레이 칸 위치(로봇 기준 거리): ') + ', '.join(
                         f"{k}번 {v['radius_m']:.3f}m" for k, v in sorted(slots.items())
                     ), flush=True)
                 hidden_warnings = (
@@ -332,9 +322,7 @@ def run_streaming(cmd, on_event=None, on_start=None, quiet=False):
                     if not any(str(w).startswith(prefix) for prefix in hidden_warnings)
                 ))
                 if warnings:
-                    echo(yellow('   ⚠ 주의: ' + ' / '.join(warnings)), flush=True)
-                if on_event:
-                    on_event('plan', (plan, warnings))
+                    print(yellow('   ⚠ 주의: ' + ' / '.join(warnings)), flush=True)
     proc.wait()
     if last_json is not None and last_error and not last_json.get('ok', True):
         last_json['reason'] = f"{last_json.get('reason')} / {last_error}"
