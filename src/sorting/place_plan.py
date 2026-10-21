@@ -9,7 +9,7 @@ from sorting.carry_path import polar_path
 from robot.robot_model import reachable
 
 ENVELOPE_M = (.16, .30)        # 집기에서 검증된 작업 거리
-CARRY_Z = .120                 # 든 채 옮길 때 높이의 상한(m)
+CARRY_Z = .130                 # 든 채 옮길 때 높이의 상한(m). 2026-10-20: 높이 41mm unknown이 2번 칸에 122mm가 필요해 120→130(IK·HOME 복귀 범위 0.135 안). 필요한 가장 낮은 높이만 쓴다
 CARRY_STEP_M = .005            # 이동 높이를 낮춰 가며 찾는 간격
 RIM_MARGIN_MM = 10.            # 물체 바닥과 트레이 벽 사이 여유(가정값)
 OBSTACLE_MARGIN_MM = 10.       # 매단 물체 바닥과 다른 물체 윗면 사이 여유(가정값)

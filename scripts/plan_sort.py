@@ -10,6 +10,7 @@
 칸을 지정하지 않으면 기본 규칙(흰 상자 1, 빨간 정육면체 2, 줄자 3). 칸 번호는 트레이에 쓴 숫자를 읽어 정한다.
 """
 import argparse
+import hashlib
 import json
 import shlex
 import sys
@@ -41,7 +42,7 @@ def live_frames():
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--command', help='예: "빨간 상자 3번 칸에 넣어줘"')
-    parser.add_argument('--object', choices=sorted(SLOT_FOR_LABEL))
+    parser.add_argument('--object', choices=sorted([*SLOT_FOR_LABEL, 'unknown']))
     parser.add_argument('--slot', type=int, help='칸 지정(없으면 기본 규칙)')
     parser.add_argument('--empty-run', action='store_true', help='물체 없이 같은 경로만 시험(흡착·해제 없음)')
     parser.add_argument('--acknowledge-unverified-suction', action='store_true')
@@ -54,6 +55,7 @@ def main(argv=None):
     parser.add_argument('--tray-frame', nargs=2, metavar=('RGB', 'DEPTH'),
                         help='칸 안에 물체가 들어 있어 칸 바닥을 못 찾을 때: 저장해 둔 트레이 프레임으로 칸 위치를 구한다. 지금 화면과 트레이 모서리가 같은 자리(3px 이내)일 때만 쓴다')
     parser.add_argument('--from-files', nargs=2, metavar=('RGB', 'DEPTH'), help='카메라 대신 저장된 프레임(시험용)')
+    parser.add_argument('--unknown-baseline', type=Path, help='unknown 추가 전 기준 깊이 프레임(.npy)')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
     if bool(args.command) == bool(args.object):
@@ -68,6 +70,8 @@ def main(argv=None):
             label, commanded = args.object, args.slot
     except ValueError as exc:
         parser.error(str(exc))
+    if label == 'unknown' and args.unknown_baseline is None:
+        parser.error('unknown은 scripts/pick_unknown.py 또는 --unknown-baseline이 필요합니다.')
     if args.from_files:
         import cv2
         import numpy as np
@@ -110,11 +114,44 @@ def main(argv=None):
         if args.tray_frame and registration is not None and tray.get('found'):
             tray['slots'] = move_slots(tray['slots'], registration, ROOT)
             tray.setdefault('problems', []).append('slot positions were carried by the measured tray move (%.0f px, %.1f deg)' % (registration['shift_px'], registration['rotation_deg']))
-        result = build_job(locate_targets(bgr, depth, ROOT), tray,
+        if label == 'unknown':
+            import numpy as np
+            from perception.unknown_objects import locate_unknowns
+            targets = locate_unknowns(bgr, depth, np.load(args.unknown_baseline, allow_pickle=False), ROOT)
+        else:
+            targets = locate_targets(bgr, depth, ROOT)
+        result = build_job(targets, tray,
                            load_catalog(ROOT / 'config/object_catalog.json'), label, commanded,
                            acknowledge_unverified_suction=args.acknowledge_unverified_suction,
                            accept_uncertain_tray=args.accept_uncertain_tray,
                            pick_radial_offset_mm=args.pick_radial_offset_mm)
+        if label == 'unknown':
+            from tray.tray_capacity import fit_unknown_in_slot
+            from tray.tray_capacity import slot_axis_xy
+            slot = dict(result['job']['slot'], floor_height_mm=tray['slots'][result['slot_number']]['floor_height_mm'],
+                        axis_xy=slot_axis_xy(tray['slots']))
+            geometry = result['job']['object_geometry']
+            pickup = next(t for t in targets if t.get('new_object'))
+            try:
+                fitted, clearance = fit_unknown_in_slot(depth, ROOT, slot, geometry, pickup['target_xy'])
+            except ValueError as exc:
+                # 4축 팔은 물체를 돌릴 수 없으므로, 책상에서 미리 돌려 놓을 각도와 들어가는 칸을 함께 알려 준다.
+                from tray.tray_capacity import suggest_unknown_turn, turn_hint
+                found = suggest_unknown_turn(depth, ROOT, {n: dict(s, axis_xy=slot['axis_xy']) for n, s in tray['slots'].items()},
+                                             geometry, pickup['target_xy'])
+                raise ValueError(f'{exc} {turn_hint(found, pickup["target_xy"], ROOT)}') from exc
+            result['job']['slot'].update(x_mm=fitted['x_mm'], y_mm=fitted['y_mm'])
+            result['job']['slot_clearance_mm'] = clearance
+            if fitted.get('tight'):
+                result['warnings'].append(f'칸 여유 {clearance:.0f}mm(권장 5mm 미만): 물체가 칸 벽에 닿을 수 있습니다. 사용자 허용으로 실행합니다.')
+            result['job']['slot_floor_height_mm'] = slot['floor_height_mm']
+            result['job']['slot_axis_xy'] = slot['axis_xy']
+            result['job']['slot_center_mm'] = fitted.get('center_mm')    # 놓기 직전 재확인도 같은 칸 사각형을 쓴다
+            result['job']['unknown_observation'] = dict(
+                baseline=str(args.unknown_baseline.resolve()),
+                baseline_sha256=hashlib.sha256(args.unknown_baseline.read_bytes()).hexdigest(),
+                target_xy=list(next(t for t in targets if t.get('new_object'))['target_xy']),
+                planned_at=datetime.now(timezone.utc).isoformat())
     except ValueError as exc:
         parser.error(str(exc))
     if not args.tray_frame and not args.from_files:

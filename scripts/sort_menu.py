@@ -10,6 +10,7 @@ import json
 import os
 import re
 import subprocess
+import unicodedata
 import sys
 import time
 from pathlib import Path
@@ -20,6 +21,40 @@ OBJECTS = {'1': ('white_box', '흰 상자', 1), '2': ('red_cube', '빨간 정육
 COMMON = ['--acknowledge-unverified-suction', '--accept-uncertain-tray', '--tray-numbering', 'far_from_base',
           '--attempts', '1', '--approach-tracking-limit', '100',
           '--place-rate', '300', '--place-pulses-per-step', '4', '--home-rate', '300']   # 속도 우선(사용자 2026-10-19): 운반·후퇴 300, 틱당 4펄스(13.4ms), 자동 HOME 복귀 300
+COLOR = sys.stdout.isatty() and not os.environ.get('NO_COLOR')
+
+
+def style(text, *codes):
+    return f"\033[{';'.join(codes)}m{text}\033[0m" if COLOR and codes else str(text)
+
+
+def bold(t): return style(t, '1')
+def dim(t): return style(t, '2')
+def green(t): return style(t, '1', '32')
+def red(t): return style(t, '1', '31')
+def yellow(t): return style(t, '33')
+def cyan(t): return style(t, '1', '36')
+
+
+def width(text):
+    """터미널 칸 너비(한글 등 전각 문자는 2칸)."""
+    return sum(2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in plain(text))
+
+
+def box(lines, title, inner=58):
+    """각진 네모 상자. 글자 너비를 맞춘 뒤 줄마다 오른쪽 테두리를 붙인다. 테두리만 청록색."""
+    head = '┌─ ' + title + ' '
+    out = [cyan(head[:3]) + bold(title) + cyan(' ' + '─' * (inner + 3 - width(head)) + '┐')]
+    out += [cyan('│') + ' ' + line + ' ' * (inner - width(plain(line))) + ' ' + cyan('│') for line in lines]
+    out.append(cyan('└' + '─' * (inner + 2) + '┘'))
+    return '\n'.join(out)
+
+
+def plain(text):
+    """색 코드를 뺀 글자(너비 계산용)."""
+    return re.sub(r'\033\[[0-9;]*m', '', text)
+
+
 TRAY_FRAME = (ROOT / 'output' / 'tray_frames' / 'latest_rgb.png', ROOT / 'output' / 'tray_frames' / 'latest_depth.npy')
 ITEMS = [
     ('1', '흰 상자 → 1번 칸'),
@@ -27,10 +62,8 @@ ITEMS = [
     ('3', '줄자 → 3번 칸'),
     ('4', '세 물체 모두 넣기 (흰 상자 → 정육면체 → 줄자 순서)'),
     ('5', '물체와 칸을 골라서 넣기'),
-    ('6', '계획만 보기 (카메라로 위치 계산, 로봇 안 움직임)'),
-    ('7', 'HOME으로 복귀'),
-    ('8', '종료 준비: 토크 끄기 (팔을 손으로 받친 상태에서)'),
-    ('9', '빈 트레이 위치 저장 (트레이가 비어 있을 때 한 번: 칸에 물체가 들어가도 칸 위치를 알 수 있게)'),
+    ('6', 'HOME으로 복귀'),
+    ('7', 'unknown 자동 집기 (시작 후 새 물체 하나 놓기)'),
     ('0', '나가기'),
 ]
 
@@ -40,7 +73,7 @@ def brief_message(message):
     """화면 문구만 번역·요약하고 내부 판정용 원문은 유지한다."""
     text = str(message or '')
     names = {'white_box': ('흰 상자가', '흰 상자'), 'red_cube': ('빨간 정육면체가', '빨간 정육면체'),
-             'tape_measure': ('줄자가', '줄자')}
+             'tape_measure': ('줄자가', '줄자'), 'unknown': ('unknown이', 'unknown')}
     subject, name = next((pair for label, pair in names.items() if label in text), ('물체가', '물체'))
     # 경계 수치를 원문에서 읽어 실제 적용 중인 제한과 같은 값을 안내한다.
     radius = re.search(r'radius ([0-9.]+) m outside (?:the )?([0-9.]+)-([0-9.]+) m pick envelope', text)
@@ -51,7 +84,9 @@ def brief_message(message):
         if distance > upper:
             return f'{subject} 너무 멉니다({distance:g}cm, 최대 {upper:g}cm). 로봇 쪽으로 옮기세요.'
     translations = (
-        ('the tray moved since the stored frame', '트레이 위치 변경: 9번으로 다시 저장하세요.'),
+        ('more than one unknown', '새 물체는 한 번에 하나씩 놓으세요.'),
+        ('unknown not found', '새 물체를 찾지 못했습니다. 물체를 놓고 다시 실행하세요.'),
+        ('the tray moved since the stored frame', '트레이 위치 변경: 빈 트레이로 계획을 한 번 실행해 다시 저장하세요.'),
         ('not reachable', '도달 불가: 물체·트레이 위치를 조정하세요.'),
         ('tray not found', '트레이 인식 실패: 트레이 전체가 보이게 하세요.'),
         ('not found in the current camera view', f'{name} 인식 실패: 카메라 화면을 확인하세요.'),
@@ -70,10 +105,25 @@ def brief_message(message):
         if needle in text:
             return korean
     if 'is not pickable' in text:
+        detail = text.split('is not pickable:', 1)[-1].split(' / ', 1)[0].strip()
+        if any('가' <= char <= '힣' for char in detail):
+            return detail[:140]
         return f'{name} 집기 조건 미충족. 물체 위치·윗면·흡착 상태를 확인하세요.'
+    if '여유가 부족' in text:
+        # 칸 여유 부족은 돌려 놓을 각도 안내가 뒤에 붙으므로 자르지 않는다.
+        return text.split('error: ', 1)[-1].replace(' 다른 칸을 선택하세요.', '').strip()
     uncertainty = re.search(r'uncertain by up to about ([0-9.]+) mm', text)
     if uncertainty:
         return f'칸 위치 오차 최대 약 {uncertainty[1]}mm'
+    if ' / ' in text:
+        detail = text.rsplit(' / ', 1)[-1]
+        if any('가' <= char <= '힣' for char in detail):
+            return detail[:140]
+    if 'pick_auto exited' in text and ' / ' in text:
+        # 원인 문구가 영어여도 숨기지 않는다(예: 운반 높이 한도). 일반 안내만 보이면 원인을 알 수 없다.
+        detail = text.rsplit(' / ', 1)[-1].split('error: ', 1)[-1].strip()
+        if detail:
+            return f'집기·놓기 중단: {detail[:160]}'
     for needle, korean in (
         ('suction not verified', '흡착 성능 미확인'),
         ('top surface is not flat', '윗면이 고르지 않아 흡착 불안정'),
@@ -89,6 +139,9 @@ def brief_message(message):
 def phase_label(name):
     """분할 이동 단계는 같은 한국어 진행 문구로 묶는다."""
     labels = (
+        ('unknown_verify', 'unknown 위치·크기 재확인'),
+        ('unknown_wait', '기준 저장 완료: 새 물체 하나를 놓고 손을 빼세요(90초 대기)'),
+        ('unknown_detected', 'unknown 감지 완료'),
         ('place_raise_clear', '놓은 뒤 상승'), ('place_raise', '운반 높이로 상승'),
         ('place_carry', '트레이로 운반'), ('place_lower', '칸으로 내리기'),
         ('place_retire', '트레이에서 후퇴'), ('place_retreat', '놓은 뒤 후퇴'),
@@ -110,6 +163,15 @@ def sort_command(label, slot=None, execute=True, use_tray_frame=True):
         cmd += ['--tray-frame', str(TRAY_FRAME[0]), str(TRAY_FRAME[1])]
     if label == 'white_box':                       # 흰 상자는 흰 책상과 섞여 집힘 판정이 틀린다: 기록만 하고 중단하지 않는다
         cmd += ['--hold-check', 'record']
+    return cmd
+
+
+def unknown_command(slot=3, execute=True):
+    cmd = [PY, str(ROOT / 'scripts/pick_unknown.py'), '--slot', str(slot), *COMMON]
+    if execute:
+        cmd += ['--execute', '--supported']
+    if all(p.exists() for p in TRAY_FRAME):
+        cmd += ['--tray-frame', *(str(p) for p in TRAY_FRAME)]
     return cmd
 
 
@@ -210,7 +272,7 @@ def ensure_torque():
     if state == 'off_elsewhere':
         print('   서보 토크가 꺼져 있고 팔이 HOME 위치가 아닙니다. 팔을 손으로 받쳐 HOME 자세로 옮긴 뒤 다시 실행하세요.')
     else:
-        print('   일부 서보만 토크가 켜져 있습니다. 팔을 받치고 8번으로 토크를 모두 끈 뒤 HOME에서 다시 시작하세요.')
+        print('   일부 서보만 토크가 켜져 있습니다. 팔을 받치고 servo_driver.py disarm으로 토크를 모두 끈 뒤 HOME에서 다시 시작하세요.')
     return False
 
 
@@ -221,6 +283,7 @@ def run_streaming(cmd):
     last_json = None
     last_error = None
     previous_phase = None
+    step = 0
     for line in proc.stdout:
         line = line.strip()
         if not line.startswith('{') and 'error:' in line:
@@ -229,7 +292,8 @@ def run_streaming(cmd):
             try:
                 phase = phase_label(json.loads(line)['phase'])
                 if phase != previous_phase:
-                    print('   ·', phase, flush=True)
+                    step += 1
+                    print(f'   {dim(f"{step:>2}")} {cyan("›")} {phase}', flush=True)
                     previous_phase = phase
             except (ValueError, KeyError):
                 pass
@@ -242,10 +306,10 @@ def run_streaming(cmd):
                 plan = last_json.get('plan', {})
                 name = next((name for label, name, _ in OBJECTS.values() if label == plan.get('label')), plan.get('label'))
                 target = [round(v) for v in plan.get('manual_target_mm', [])]
-                print(f"   계획: {name} → {plan.get('slot_number')}번 칸, 목표 {target} mm", flush=True)
+                print(f"   {bold('계획')} {name} {cyan('→')} {plan.get('slot_number')}번 칸  {dim(f'목표 {target} mm')}", flush=True)
                 slots = plan.get('tray_slots') or {}
                 if slots:
-                    print('   트레이 칸 위치(로봇 기준 거리): ' + ', '.join(
+                    print(dim('   트레이 칸 위치(로봇 기준 거리): ') + ', '.join(
                         f"{k}번 {v['radius_m']:.3f}m" for k, v in sorted(slots.items())
                     ), flush=True)
                 hidden_warnings = (
@@ -258,7 +322,7 @@ def run_streaming(cmd):
                     if not any(str(w).startswith(prefix) for prefix in hidden_warnings)
                 ))
                 if warnings:
-                    print('   주의: ' + ' / '.join(warnings), flush=True)
+                    print(yellow('   ⚠ 주의: ' + ' / '.join(warnings)), flush=True)
     proc.wait()
     if last_json is not None and last_error and not last_json.get('ok', True):
         last_json['reason'] = f"{last_json.get('reason')} / {last_error}"
@@ -267,10 +331,10 @@ def run_streaming(cmd):
 
 def report(code, result, seconds):
     ok = bool(result and result.get('ok')) and code == 0
-    print(f'   → {"성공" if ok else "실패"} ({seconds:.0f}초)')
+    print('   ' + (green('✔ 성공') if ok else red('✘ 실패')) + dim(f'  ({seconds:.0f}초)'))
     if not ok:
         reason = (result or {}).get('reason')
-        print('   이유:', brief_message(reason) if reason else f'종료 코드 {code}')
+        print(red('   이유:'), brief_message(reason) if reason else f'종료 코드 {code}')
     return ok
 
 
@@ -302,7 +366,7 @@ def run_one(label, slot=None):
     code, result, seconds = run_streaming(sort_command(label, slot=slot))
     if (code != 0 and 'the tray moved since the stored frame' in str((result or {}).get('reason', ''))
             and any('--tray-frame' in part for part in sort_command(label, slot=slot))):
-        print('   트레이 위치 변경: 카메라로 다시 찾습니다. 실패하면 9번으로 다시 저장하세요.')
+        print('   트레이 위치 변경: 카메라로 다시 찾습니다. 실패하면 빈 트레이로 계획을 한 번 실행해 다시 저장하세요.')
         code, result, seconds = run_streaming(sort_command(label, slot=slot, use_tray_frame=False))
     if report(code, result, seconds):
         found = newest_result(since)
@@ -313,7 +377,7 @@ def run_one(label, slot=None):
 
 
 def put_one(label, name, slot):
-    print(f'\n[{name} → {slot}번 칸]')
+    print('\n' + bold(f'▌ {name} → {slot}번 칸'))
     if not confirm(f'{name}을(를) {slot}번 칸에 넣습니다. 팔 주변을 비웠는지 확인하세요.'):
         print('취소했습니다.')
         return False
@@ -327,24 +391,22 @@ OBJECTS_DEFAULT = {label: slot for label, _, slot in OBJECTS.values()}
 
 def choose_object():
     for key, (label, name, slot) in OBJECTS.items():
-        print(f'   {key}) {name}')
-    pick = input('물체 번호: ').strip()
+        print(f'   {cyan(key)}  {name}')
+    pick = input(bold('물체 번호 ') + cyan('▸ ')).strip()
     return OBJECTS.get(pick)
 
 
 def menu():
-    print('\n===== 물체 넣기 메뉴 =====')
-    for key, text in ITEMS:
-        print(f' {key}) {text}')
-    return input('번호 입력: ').strip()
+    rows = [f'{cyan(f"{key:>2}") if key != "0" else dim(f"{key:>2}")}  {text if key != "0" else dim(text)}' for key, text in ITEMS]
+    print('\n' + box(rows, '물체 분류기'))
+    return input(bold('번호 입력 ') + cyan('▸ ')).strip()
 
 
 def main():
-    print('SO-101 물체 넣기. 사진은 실행할 때마다 새로 찍어서 좌표를 계산합니다.')
     while True:
         choice = menu()
         if choice == '0':
-            print('종료합니다.')
+            print(dim('종료합니다.'))
             return
         if choice in OBJECTS:
             label, name, slot = OBJECTS[choice]
@@ -357,12 +419,12 @@ def main():
                 continue
             for key in ('1', '2', '3'):
                 label, name, slot = OBJECTS[key]
-                print(f'\n[{name} → {slot}번 칸]')
+                print('\n' + bold(f'▌ {name} → {slot}번 칸'))
                 if not run_one(label):
                     print(f'{name}에서 멈췄습니다. 나머지는 실행하지 않았습니다. 원인을 확인한 뒤 해당 번호를 다시 고르세요.')
                     break
             else:
-                print('\n세 물체를 모두 넣었습니다.')
+                print('\n' + green('✔ 세 물체를 모두 넣었습니다.'))
         elif choice == '5':
             picked = choose_object()
             slot = input('칸 번호(1~3): ').strip()
@@ -371,27 +433,27 @@ def main():
                 continue
             label, name, _ = picked
             put_one(label, name, int(slot))
-        elif choice == '6':
-            picked = choose_object()
-            if picked is None:
-                print('잘못된 입력입니다.')
-                continue
-            label, name, slot = picked
-            print(f'\n[{name} 계획만 보기: 로봇은 움직이지 않습니다]')
-            code, result, seconds = run_streaming(sort_command(label, execute=False))
-            print('   (계획만 보기를 끝냈습니다)' if code == 0 else f'   실패: {brief_message((result or {}).get("reason")) or "종료 코드 " + str(code)}')
         elif choice == '7':
+            slot = input('unknown을 놓을 칸(1~3, Enter=3): ').strip() or '3'
+            if slot not in ('1', '2', '3'):
+                print('칸은 1~3 중 선택하세요.')
+                continue
+            execute = True
+            if execute and (not confirm('unknown을 자동으로 집습니다. 물체는 대기 안내 후 놓고 손을 빼세요.') or not ensure_torque()):
+                continue
+            if not execute and live_view_running():
+                print('카메라 창을 닫은 뒤 다시 실행하세요.')
+                continue
+            code, result, seconds = run_streaming(unknown_command(int(slot), execute=execute))
+            if execute:
+                report(code, result, seconds)
+            else:
+                print('   계획 확인 완료(이동 없음).' if code == 0 else '   실패: ' + brief_message((result or {}).get('reason') or f'종료 코드 {code}'))
+        elif choice == '6':
             if confirm('HOME으로 복귀합니다.') and ensure_torque():
                 code, result, seconds = run_streaming([PY, str(ROOT / 'scripts' / 'return_home.py'), '--execute', '--supported', '--travel-rate', '150', '--tracking-limit', '32'])
                 done = bool(result and result.get('home_return_complete'))
                 print('   → 복귀 완료' if done else f'   → 복귀 결과: {brief_message((result or {}).get("error")) or code}')
-        elif choice == '9':
-            print('\n[빈 트레이 위치 저장: 카메라만 읽습니다]  트레이가 비어 있고(물체·케이블 없음) 칸이 모두 보여야 합니다.')
-            code, result, seconds = run_streaming([PY, str(ROOT / 'scripts' / 'save_tray_frame.py')])
-            print('   → 저장했습니다. 이제 칸에 물체가 들어가도 칸 위치를 압니다.' if code == 0 else f'   → 저장하지 못했습니다: {brief_message((result or {}).get("reason")) or "종료 코드 " + str(code)}')
-        elif choice == '8':
-            if confirm('토크를 끕니다. 팔을 손으로 받치세요(HOME 위치에서만 끄세요).'):
-                subprocess.run([PY, str(ROOT / 'scripts' / 'servo_driver.py'), 'disarm', '--supported'], cwd=ROOT)
         else:
             print('목록에 있는 번호를 입력하세요.')
 

@@ -27,7 +27,7 @@ def build_job(targets, tray, catalog, label, commanded_slot=None, *, acknowledge
             or not math.isfinite(pick_radial_offset_mm) or abs(pick_radial_offset_mm) > 10.):
         raise ValueError('pick radial offset must be a finite number within -10..10 mm')
     slot_number = choose_slot(label, commanded_slot)
-    matches = [t for t in targets if t['label'] == label]
+    matches = [t for t in targets if t['label'] == label and (label != 'unknown' or t.get('new_object'))]
     if not matches:
         raise ValueError(f'{label} not found in the current camera view')
     if len(matches) > 1:
@@ -35,6 +35,11 @@ def build_job(targets, tray, catalog, label, commanded_slot=None, *, acknowledge
     target = matches[0]
     if not target['pickable']:
         raise ValueError(f'{label} is not pickable: ' + '; '.join(target['problems']))
+    if label == 'unknown':
+        from perception.unknown_objects import unknown_catalog
+        catalog = unknown_catalog(catalog, target.get('object_geometry'))
+        if pick_radial_offset_mm:
+            raise ValueError('unknown은 관측한 흡착 지점에서만 집을 수 있습니다.')
     warnings = []
     if not target['suction_verified']:
         if not acknowledge_unverified_suction:
@@ -50,10 +55,11 @@ def build_job(targets, tray, catalog, label, commanded_slot=None, *, acknowledge
         warnings.append(f'tray slot positions are uncertain by up to about {uncertainty:.0f} mm')
     slot = tray['slots'][slot_number]
     entry = catalog['objects'][label]
-    drop = drop_z_mm(slot['floor_height_mm'], entry['height_mm'], catalog['cup_contact_offset_mm']) + DROP_RAISE_MM
+    held_height = entry['height_mm'] + (entry['height_uncertainty_mm'] if label == 'unknown' else 0.)
+    drop = drop_z_mm(slot['floor_height_mm'], held_height, catalog['cup_contact_offset_mm']) + DROP_RAISE_MM
     obstacles = [dict(label=t['label'], x_mm=t['target_xy'][0] * 1000., y_mm=t['target_xy'][1] * 1000.,
-                      height_mm=float(catalog['objects'][t['label']]['height_mm']),
-                      radius_mm=footprint_radius_mm(catalog['objects'][t['label']])) for t in targets if t is not target]
+                      height_mm=float((t.get('object_geometry') or catalog['objects'][t['label']])['height_mm']),
+                      radius_mm=footprint_radius_mm(t.get('object_geometry') or catalog['objects'][t['label']])) for t in targets if t is not target]
     camera = [target['target_xy'][0] * 1000., target['target_xy'][1] * 1000., target['contact_z'] * 1000.]
     radius = math.hypot(camera[0], camera[1])
     tilt_deg = float(target.get('pick_tilt_deg') or 0.)
@@ -62,7 +68,10 @@ def build_job(targets, tray, catalog, label, commanded_slot=None, *, acknowledge
     manual = [camera[0] * scale, camera[1] * scale, camera[2]]
     # 위치별 옆 방향 보정(config/pick_xy_correction.json, 빨간 정육면체 접촉 사진으로 측정, 2026-10-16)
     from perception import pick_correction
-    manual[0], manual[1], tangential = pick_correction.apply(manual[0], manual[1])
+    if label == 'unknown':
+        tangential = 0.
+    else:
+        manual[0], manual[1], tangential = pick_correction.apply(manual[0], manual[1])
     slot_x, slot_y = slot['x_mm'], slot['y_mm']
     shift = SLOT_RADIAL_OFFSET_MM.get(slot_number, 0.)
     if shift:
@@ -70,6 +79,8 @@ def build_job(targets, tray, catalog, label, commanded_slot=None, *, acknowledge
         slot_x, slot_y = slot_x * (slot_radius + shift) / slot_radius, slot_y * (slot_radius + shift) / slot_radius
     job = dict(label=label, slot=dict(x_mm=slot_x, y_mm=slot_y, drop_z_mm=drop),
                rim_height_mm=float(tray['rim_height_mm']), obstacles=obstacles)
+    if label == 'unknown':
+        job['object_geometry'] = target['object_geometry']
     if commanded_slot is not None:
         job['slot_number'] = slot_number
     return dict(job=job, slot_number=slot_number, slot_source='command' if commanded_slot is not None else 'default_rule',
@@ -84,6 +95,7 @@ _OBJECT_WORDS = (
     ('white_box', ('흰 상자', '하얀 상자', '흰상자', '하얀상자', 'white box')),
     ('red_cube', ('빨간 상자', '빨강 상자', '빨간상자', '빨간 정육면체', '빨강 정육면체', '정육면체', 'red cube', 'red box')),
     ('tape_measure', ('줄자', 'tape measure', 'tape')),
+    ('unknown', ('unknown', '새 물체', '미등록 물체')),
 )
 _ORDINAL = {'첫': 1, '한': 1, '두': 2, '세': 3, '셋': 3}
 

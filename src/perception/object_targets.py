@@ -30,6 +30,11 @@ MIN_CONTACT_Z_M = .010        # 사용자 지시(2026-10-15)로 30mm 하한을 �
 def footprint_radius_mm(entry, default=40.):
     """물체 윗면 가로×세로(footprint_mm)의 대각선 절반 = 방향을 몰라도 안전한 수평 반경. 크기를 모르면 가정값."""
     size = entry.get('footprint_mm') if isinstance(entry, dict) else None
+    if isinstance(entry, dict) and 'footprint_radius_mm' in entry:
+        radius = entry['footprint_radius_mm']
+        if isinstance(radius, bool) or not isinstance(radius, (int, float)) or not math.isfinite(radius) or radius <= 0:
+            raise ValueError('object footprint radius must be finite and positive')
+        return float(radius)
     if not size:
         return float(default)
     return math.hypot(*size) / 2.

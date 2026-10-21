@@ -33,6 +33,8 @@ def main(argv=None):
     parser.add_argument('--empty-run', action='store_true')
     parser.add_argument('--tray-frame', nargs=2, metavar=('RGB', 'DEPTH'), help='칸 안에 물체가 있어 트레이를 못 찾을 때: 칸이 빈 상태의 저장 프레임(plan_sort.py가 현재 트레이와 맞는지 검사한다)')
     parser.add_argument('--tray-numbering')
+    parser.add_argument('--unknown-baseline', type=Path)
+    parser.add_argument('--from-files', nargs=2, metavar=('RGB', 'DEPTH'))
     args, extra = parser.parse_known_args(argv)         # 나머지 옵션은 pick_auto.py에 그대로 넘긴다
     if args.execute and not args.supported:
         parser.error('--execute requires --supported')
@@ -48,6 +50,19 @@ def main(argv=None):
         plan_cmd += ['--tray-frame', *args.tray_frame]
     if args.tray_numbering:
         plan_cmd += ['--tray-numbering', args.tray_numbering]
+    if args.unknown_baseline:
+        plan_cmd += ['--unknown-baseline', str(args.unknown_baseline)]
+    if args.from_files:
+        plan_cmd += ['--from-files', *args.from_files]
+    label = args.object
+    if args.command:
+        from sorting.sort_job import parse_command
+        try:
+            label, _ = parse_command(args.command)
+        except ValueError as exc:
+            parser.error(str(exc))
+    if label == 'unknown' and args.attempts != 1:
+        parser.error('unknown은 장면을 다시 확인하기 위해 한 번만 시도합니다(--attempts 1).')
     for flag, on in (('--accept-uncertain-tray', args.accept_uncertain_tray), ('--acknowledge-unverified-suction', args.acknowledge_unverified_suction),
                      ('--empty-run', args.empty_run)):
         if on:

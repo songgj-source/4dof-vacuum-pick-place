@@ -174,6 +174,12 @@ def main(argv=None):
         if not math.isfinite(args.place_max_tilt_deg) or not 0.<=args.place_max_tilt_deg<=50.:parser.error('--place-max-tilt-deg must be 0-50 degrees')
         try:
             place_job=load_place_job(args.place_json)
+            if place_job['label']=='unknown':
+                object_geometry=place_job['object_geometry']   # 'geometry'는 팔 기구학 모델 이름이라 덮어쓰면 안 된다
+                args.place_max_tilt_deg=0.  # 외곽 적합 검사는 수직 놓기를 전제로 한다.
+                from perception.unknown_objects import CONTACT_PRESS_MM
+                if args.pick_tilt_deg or abs(manual['contact_z']*1000.-(object_geometry['height_mm']-CONTACT_PRESS_MM))>.1:
+                    raise ValueError('unknown 목표 높이가 관측값과 다르거나 수직 집기가 아닙니다.')
             place_model=load_planar_model(ROOT);place_catalog=load_catalog(ROOT/'config/object_catalog.json')
             preview_start=(*manual['target_xy'],.070 if args.place_empty_run else manual['contact_z']+.020)
             preview=build_plan(place_job,place_model,place_catalog,preview_start,args.place_max_tilt_deg,args.pick_tilt_deg)
@@ -192,6 +198,8 @@ def main(argv=None):
                            note=('empty run: no suction and no release; starts from the 70 mm hover' if args.place_empty_run else
                                  'assumed start is contact z + 20 mm; the real plan is recomputed from the measured pose after lifting'),
                            physically_validated=False)
+        if place_job['label']=='unknown':
+            plan['place']['object_geometry']=place_job['object_geometry']
     if not args.execute:
         if manual is not None:
             plan['located']=dict(manual)
@@ -207,6 +215,10 @@ def main(argv=None):
         cv2.imwrite(str(Path(source).with_name('target_annotation.png')),annotate(image,located))
         plan['located']=located
         print(json.dumps(dict(execute=False,motor_writes=False,pump_writes=False,plan=plan),ensure_ascii=False,indent=2,default=float));return 0
+    if place_job is not None and place_job['label']=='unknown':
+        from pick_unknown import verify_before_motion
+        try:verify_before_motion(place_job,ROOT,manual['target_xy'])
+        except Exception as exc:parser.error(str(exc))
     out=args.output or ROOT/'output/pick_trials'/datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')
     out.mkdir(parents=True,exist_ok=False)
     result=dict(plan=plan,motion_cycle_complete=False,physical_pick_success=None,phases=[],pump_commands=[],normal_execution_enabled=False)

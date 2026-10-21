@@ -29,6 +29,10 @@ def load_place_job(path):
         raise ValueError('place job must be a JSON object')
     label = data.get('label')
     slot_number = choose_slot(label, data.get('slot_number'))
+    geometry = None
+    if label == 'unknown':
+        from perception.unknown_objects import validate_geometry
+        geometry = validate_geometry(data.get('object_geometry'))
     slot = data.get('slot')
     if not isinstance(slot, dict) or any(k not in slot for k in ('x_mm', 'y_mm', 'drop_z_mm')):
         raise ValueError('place job: slot needs x_mm, y_mm and drop_z_mm')
@@ -48,18 +52,29 @@ def load_place_job(path):
         obstacles.append(dict(label=str(item.get('label', 'object')), x=_finite(item['x_mm'], 'obstacle x') / 1000.,
                               y=_finite(item['y_mm'], 'obstacle y') / 1000., height_mm=_finite(item['height_mm'], 'obstacle height'),
                               radius_mm=_finite(item['radius_mm'], 'obstacle radius')))
-    return dict(label=label, slot_number=slot_number,
+    result = dict(label=label, slot_number=slot_number,
                 slot_source='command' if data.get('slot_number') is not None else 'default_rule',
                 slot=dict(x=_finite(slot['x_mm'], 'slot x') / 1000., y=_finite(slot['y_mm'], 'slot y') / 1000.,
                           drop_z=_finite(slot['drop_z_mm'], 'slot drop z') / 1000.),
                 rim_height_mm=rim, obstacles=obstacles)
+    if geometry is not None:
+        result.update(object_geometry=geometry, unknown_observation=data.get('unknown_observation'),
+                      slot_floor_height_mm=data.get('slot_floor_height_mm'), slot_axis_xy=data.get('slot_axis_xy'),
+                      slot_center_mm=data.get('slot_center_mm'))
+    return result
 
 
 def build_plan(job, model, catalog, start_xyz, max_tilt_deg=DEFAULT_MAX_TILT_DEG, start_tilt_deg=0.):
     """작업 + 시작 자세(m) → place_plan 계획. 도달·벽 높이·주변 물체 검사에 실패하면 ValueError."""
+    if job['label'] == 'unknown':
+        from perception.unknown_objects import unknown_catalog
+        catalog = unknown_catalog(catalog, job.get('object_geometry'))
     entry = catalog['objects'][job['label']]
     offset = float(catalog['cup_contact_offset_mm'])
     held = float(entry['height_mm'])
+    if job['label'] == 'unknown':
+        held += entry['height_uncertainty_mm']
+        max_tilt_deg = 0.
     need = min_carry_z(held, job['rim_height_mm'], contact_offset_mm=offset)
     return plan_place(model, job['slot'], tuple(start_xyz), min_carry_z=need, held_height_mm=held,
                       obstacles=job['obstacles'], contact_offset_mm=offset, held_radius_mm=footprint_radius_mm(entry), max_tilt_deg=max_tilt_deg,

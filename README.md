@@ -69,17 +69,17 @@ PC는 USB 115200 baud로 펌프를 제어합니다(`p` 흡착 / `d` 배기 300 m
 
 ```bash
 cd 4dof_ik
-python scripts/sort_menu.py          # 번호 메뉴: 물체 넣기 · HOME 복귀 · 빈 트레이 저장
+python scripts/sort_menu.py          # 번호 메뉴: 물체 분류기 (1~5 물체 넣기, 6 HOME 복귀, 7 새 물체 자동 집기)
 python scripts/plan_sort.py --command "빨간 상자 3번 칸에 넣어줘"   # 카메라만 읽고 계획 출력
 python scripts/run_sort.py --execute --supported --object red_cube  # 실제 구동 (재시도 포함)
 ```
 
-`--execute --supported` 없이 실행하면 로봇을 움직이지 않고 계획만 출력합니다.
+`--execute --supported` 없이 실행하면 로봇을 움직이지 않고 계획만 출력합니다. 개발 환경은 conda `lerobot_312`(Python 3.12)입니다.
 
 ## 폴더 구조
 
 ```
-scripts/      메뉴, 계획, 집기·놓기 실행, HOME 복귀, 보정 도구
+scripts/      메뉴, 계획, 집기·놓기 실행, 새 물체(unknown) 집기, HOME 복귀, 보정 도구
 src/camera    Astra 촬영, 카메라 보정, 손목 영상
 src/perception 물체 분류, 집기 목표, 위치 보정
 src/tray      트레이·칸·숫자 검출
@@ -87,6 +87,7 @@ src/robot     좌표계, 4축 IK
 src/hardware  서보 버스, 관절 매핑, 궤적 검증, 진공 펌프
 src/motion    접근·복귀, 정지·집힘 확인, 게인
 src/sorting   운반·놓기 계획과 실행
+tests/        새 물체 인식·칸 맞춤·계획 연결 시험
 하드웨어 설명/  배선도, 핀 명세, ESP32 펌웨어, 진공흡착팔 CAD(STEP)
 portfolio/    설명서 PDF, 그림, 동작 영상
 ```

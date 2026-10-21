@@ -11,3 +11,4 @@ output/**/contact_rgb_frames/
 # 다른 사람이 만든 파일 (라이선스 미확인, 저장소에 포함하지 않음)
 하드웨어 설명/SO101_진공흡착팔_CAD/*.stp
 calibration/openni2_redist/
+.swarm/

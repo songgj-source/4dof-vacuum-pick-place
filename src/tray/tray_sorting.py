@@ -26,10 +26,10 @@ def choose_slot(label, commanded=None):
 
     이름을 모르는 물체는 높이를 몰라 벽 위로 옮길 수 있는지·놓는 높이를 계산할 수 없어 거부한다.
     """
-    if label not in SLOT_FOR_LABEL:
+    if label not in SLOT_FOR_LABEL and label != 'unknown':
         raise ValueError(f'unknown object {label!r}: only white_box, red_cube and tape_measure can be placed')
     if commanded is None:
-        return SLOT_FOR_LABEL[label]
+        return 3 if label == 'unknown' else SLOT_FOR_LABEL[label]
     if isinstance(commanded, bool) or not isinstance(commanded, int) or commanded not in (1, 2, 3):
         raise ValueError(f'slot must be 1, 2 or 3, got {commanded!r}')
     return commanded
