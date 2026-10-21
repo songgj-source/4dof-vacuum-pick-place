@@ -15,8 +15,9 @@ MIN_HEIGHT_MM, MAX_HEIGHT_MM = 20., 45.
 MAX_FOOTPRINT_MM = 120.
 HEIGHT_UNCERTAINTY_MM = 3.
 MIN_PATCH_DIAMETER_MM = 20.  # 초기 지원 범위. 실제 컵 크기에 대한 물리 검증은 별도.
-# 10-20 실물 성공(높이 36mm 물체, 측정 윗면 38mm에서 그대로 흡착): unknown은 눌림 보정 없이 측정 윗면에서 멈춘다.
-CONTACT_PRESS_MM = 0.
+# 깊이로 잰 윗면 높이는 ±3mm 오차가 있어 가끔 컵이 닿기 전에 멈춰 흡착이 안 된다(사용자 2026-10-21).
+# 그래서 측정한 윗면보다 2mm 더 내려가 흡착한 뒤 들어 올린다(스프링 컵이 눌리며 밀착). 10-20 성공은 보정 0에서였다.
+CONTACT_PRESS_MM = 2.
 
 
 def validate_geometry(geometry):

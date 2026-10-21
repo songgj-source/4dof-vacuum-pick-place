@@ -54,6 +54,8 @@ def main(argv=None):
                         choices=['read_digits', 'larger_y', 'smaller_y', 'near_base', 'far_from_base'])
     parser.add_argument('--tray-frame', nargs=2, metavar=('RGB', 'DEPTH'),
                         help='칸 안에 물체가 들어 있어 칸 바닥을 못 찾을 때: 저장해 둔 트레이 프레임으로 칸 위치를 구한다. 지금 화면과 트레이 모서리가 같은 자리(3px 이내)일 때만 쓴다')
+    parser.add_argument('--tray-fallback-live', action='store_true',
+                        help='저장한 빈 트레이 프레임이 안 맞으면(트레이가 크게 움직임) 거부하지 않고 지금 카메라로 트레이를 다시 찾아 새 기준으로 저장한다')
     parser.add_argument('--from-files', nargs=2, metavar=('RGB', 'DEPTH'), help='카메라 대신 저장된 프레임(시험용)')
     parser.add_argument('--unknown-baseline', type=Path, help='unknown 추가 전 기준 깊이 프레임(.npy)')
     parser.add_argument('--output', type=Path)
@@ -87,6 +89,8 @@ def main(argv=None):
                     break
                 bgr, depth, extra = live_frames()
     tray_source, tray_offset = 'live camera', None
+    stored_tray_ok = bool(args.tray_frame)
+    fresh_tray = None
     if args.tray_frame:
         import cv2
         import numpy as np
@@ -97,11 +101,21 @@ def main(argv=None):
         if not check['ok']:
             # 조금 밀렸거나 돌았으면 밀린 만큼을 측정해서 저장해 둔 칸 위치를 옮겨 쓴다(모서리 2곳 이상이 정확히 맞아야 한다). 크게 움직였으면 거부한다.
             registration = register_tray(stored_bgr, bgr, depth=stored_depth, root=ROOT)
-            if not registration['ok']:
+            if not registration['ok'] and args.tray_fallback_live:
+                # 트레이가 저장한 위치에서 크게 움직였다: 지금 카메라로 트레이를 다시 찍는다(새 프레임으로 최대 5번). 물체 쪽 프레임은 그대로 쓴다.
+                stored_tray_ok, registration = False, None
+                fresh_tray = live_frames()
+                for _ in range(5):
+                    if detect_tray(fresh_tray[0], fresh_tray[1], ROOT, first_end=args.tray_numbering, extra_bgr=fresh_tray[2]).get('found'):
+                        break
+                    fresh_tray = live_frames()
+            elif not registration['ok']:
                 parser.error(f'the tray moved since the stored frame (corner offsets {[round(v, 1) for v in check["offsets_px"]]} px, scores '
                              f'{[round(v, 2) for v in check["scores"]]}; {registration.get("reason")}); detect it from the live camera instead')
-        tray_frame_args = (stored_bgr, stored_depth, [stored_bgr] * 5)
-        if registration is None:
+        tray_frame_args = (stored_bgr, stored_depth, [stored_bgr] * 5) if stored_tray_ok else fresh_tray
+        if not stored_tray_ok:
+            tray_source = 'live camera (트레이가 저장한 위치에서 움직여 다시 찾음)'
+        elif registration is None:
             tray_source, tray_offset = f'stored frame {args.tray_frame[0]} (tray unchanged: corner offset {check["max_offset_px"]:.1f} px)', check['max_offset_px']
         else:
             tray_source = (f'stored frame {args.tray_frame[0]} moved by the measured tray shift ({registration["shift_px"]:.0f} px, '
@@ -154,12 +168,12 @@ def main(argv=None):
                 planned_at=datetime.now(timezone.utc).isoformat())
     except ValueError as exc:
         parser.error(str(exc))
-    if not args.tray_frame and not args.from_files:
+    if (not args.tray_frame and not args.from_files) or not stored_tray_ok:     # 저장한 트레이가 안 맞아 다시 찾았으면 새 기준으로 저장
         # 2026-10-20: 카메라로 트레이를 직접 찾았고 칸 바닥 3개가 모두 보이면(=비어 있음) 이 프레임을 빈 트레이 기준으로 자동 저장한다.
         # 물체가 들어간 다음 계획에서 --tray-frame으로 칸 위치를 알 수 있다(메뉴 9번을 따로 누르지 않아도 된다). 실패해도 계획에는 영향 없음.
         try:
             from save_tray_frame import save_if_empty
-            save_if_empty(bgr, depth)
+            save_if_empty(*(tray_frame_args[:2] if not stored_tray_ok and fresh_tray else (bgr, depth)))
         except Exception:
             pass
     out = args.output or ROOT / 'output/place_jobs' / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')

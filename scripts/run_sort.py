@@ -32,6 +32,7 @@ def main(argv=None):
     parser.add_argument('--pick-radial-offset-mm', type=float)
     parser.add_argument('--empty-run', action='store_true')
     parser.add_argument('--tray-frame', nargs=2, metavar=('RGB', 'DEPTH'), help='칸 안에 물체가 있어 트레이를 못 찾을 때: 칸이 빈 상태의 저장 프레임(plan_sort.py가 현재 트레이와 맞는지 검사한다)')
+    parser.add_argument('--tray-fallback-live', action='store_true')
     parser.add_argument('--tray-numbering')
     parser.add_argument('--unknown-baseline', type=Path)
     parser.add_argument('--from-files', nargs=2, metavar=('RGB', 'DEPTH'))
@@ -48,6 +49,8 @@ def main(argv=None):
         plan_cmd += ['--slot', str(args.slot)]
     if args.tray_frame:
         plan_cmd += ['--tray-frame', *args.tray_frame]
+    if args.tray_fallback_live:
+        plan_cmd.append('--tray-fallback-live')
     if args.tray_numbering:
         plan_cmd += ['--tray-numbering', args.tray_numbering]
     if args.unknown_baseline:
